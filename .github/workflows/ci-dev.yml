@@ -13,4 +13,6 @@ jobs:
         - name: List files
           run: ls -la
         - name: Build Docker image
-          run: docker build -t noseyug/applyhub/application-service:${{ github.sha }} /backend/application-service
+          run: |
+           SHORT_SHA=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})
+           docker build -t noseyug/applyhub/application-service:$SHORT_SHA ./backend/application-service/
