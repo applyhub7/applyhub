@@ -13,4 +13,4 @@ jobs:
         - name: List files
           run: ls -la
         - name: Build Docker image
-          run: docker build -t noseyug/applyhub/application-service:${{ github.sha }} /backend/application-service
+          run: docker build -t noseyug/applyhub/application-service:${{ github.sha }} ./backend/application-service/
