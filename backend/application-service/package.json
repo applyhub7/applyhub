@@ -1,0 +1,14 @@
+{
+  "name": "applyhub-application",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "fastify": "^5.3.3",
+    "minio": "^8.0.5",
+    "pg": "^8.13.1"
+  }
+}
