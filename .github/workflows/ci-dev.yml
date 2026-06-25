@@ -16,4 +16,18 @@ jobs:
           run: |
            SHORT_SHA=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})
            docker build -t noseyug/applyhub/application-service:$SHORT_SHA ./backend/application-service/
-           docker build -t noseyug/applyhub/auth-service:$SHORT_SHA ./backend/auth-service/
+           #  docker build -t noseyug/applyhub/auth-service:$SHORT_SHA ./backend/auth-service/
+
+
+    test1:
+        runs-on: ubuntu-latest        
+        steps:
+        - name: Checkout source code
+          uses: actions/checkout@v4
+        - name: List files
+          run: ls -la
+        - name: Build Docker image
+          run: |
+            SHORT_SHA=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})
+            #  docker build -t noseyug/applyhub/application-service:$SHORT_SHA ./backend/application-service/
+            docker build -t noseyug/applyhub/auth-service:$SHORT_SHA ./backend/auth-service/
