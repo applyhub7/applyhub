@@ -9,4 +9,6 @@ app.use(cors());
 app.use(express.json());
 await initAuthDb();
 await authRoutes(app);
-app.listen(authConfig.port, () => console.log(`auth service listening on ${authConfig.port}`));
+app.listen(authConfig.port, () =>
+  console.log(`auth service listening on ${authConfig.port} in ${authConfig.nodeEnv} mode`)
+);

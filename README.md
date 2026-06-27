@@ -4,7 +4,7 @@
 [![React](https://img.shields.io/badge/React-19.0.0-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
-[![Node.js](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Fastify](https://img.shields.io/badge/Fastify-5.x-000000?logo=fastify&logoColor=white)](https://fastify.dev/)
 [![Express](https://img.shields.io/badge/Express-4.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
@@ -42,7 +42,7 @@ ApplyHub là một nền tảng tuyển dụng gồm frontend React/Vite và 4 b
 
 ## Yêu Cầu
 
-- Node.js 20+ cho `auth-service`, `api-gateway`, `application-service` và `frontend`
+- Node.js 18+ cho `auth-service`, `api-gateway`, `application-service` và `frontend`
 - Python 3.11+ cho `job-service`
 - PostgreSQL cho `auth-service`, `job-service`, `application-service`
 - MinIO cho lưu CV của ứng viên

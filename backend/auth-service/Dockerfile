@@ -1,8 +1,13 @@
-FROM node:18-alpine AS builder
+FROM node:18-alpine
+
 WORKDIR /app
-COPY package*.json ./
-RUN npm install 
+
+COPY package*.json .
+
+RUN npm ci --omit=dev
+
 COPY src ./src
 
 EXPOSE 4001
+
 CMD ["npm", "start"]
