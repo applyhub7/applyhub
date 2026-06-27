@@ -1,7 +1,8 @@
 import { loginUser, logoutUser, refreshAccessToken, registerUser, verifyAccessToken } from "./service.js";
+import { authConfig } from "./config.js";
 
 export async function authRoutes(app) {
-  app.get("/health", async () => ({ ok: true, service: "auth" }));
+  app.get("/health", async () => ({ ok: true, service: "auth", environment: authConfig.nodeEnv }));
 
   app.post("/auth/register", async (req, res) => {
     const result = await registerUser(req.body || {});
