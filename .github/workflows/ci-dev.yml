@@ -32,7 +32,7 @@ jobs:
         - name: Build frontend image
           run: |
             SHORT_SHA=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})
-            docker build -t noseyug/applyhub/frontend:$SHORT_SHA .frontend
+            docker build -t noseyug/applyhub/frontend:$SHORT_SHA ./frontend/
           
 
         # - name: Build frontend image   
