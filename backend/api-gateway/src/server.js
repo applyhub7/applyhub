@@ -3,7 +3,7 @@ import cors from "@fastify/cors";
 import { gatewayRoutes } from "./routes.js";
 import { gatewayConfig } from "./config.js";
 
-const app = Fastify({ logger: true });
+const app = Fastify({ logger: { level: gatewayConfig.isProduction ? "info" : "debug" } });
 
 await app.register(cors, {
   origin: process.env.CORS_ORIGIN || "http://localhost:5173",
