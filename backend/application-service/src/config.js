@@ -1,4 +1,6 @@
 export const applicationConfig = {
+  nodeEnv: process.env.NODE_ENV || "development",
+  isProduction: process.env.NODE_ENV === "production",
   port: Number(process.env.APPLICATION_PORT || "4003"),
   minio: {
     endPoint: process.env.MINIO_ENDPOINT || "localhost",

@@ -1,4 +1,5 @@
 import { applyToJob, changeApplicationStatus, listJobApplications, listMyApplications } from "./service.js";
+import { applicationConfig } from "./config.js";
 
 function requireUser(request) {
   const user = request.headers["x-user"];
@@ -6,7 +7,7 @@ function requireUser(request) {
 }
 
 export async function applicationRoutes(app) {
-  app.get("/health", async () => ({ ok: true, service: "application" }));
+  app.get("/health", async () => ({ ok: true, service: "application", environment: applicationConfig.nodeEnv }));
 
   app.post("/applications", async (request, reply) => {
     const user = requireUser(request);
