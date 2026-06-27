@@ -29,14 +29,13 @@ jobs:
             sleep 5
             curl http://127.0.0.1:4173
 
-
-         - name: Setup image tag
-           run: |
+        - name: Setup image tag
+          run: |
             SHORT_SHA=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})
           
 
-         - name: Build frontend image   
-            docker build -t noseyug/applyhub/frontend:$SHORT_SHA .frontend
+        - name: Build frontend image   
+          run:  docker build -t noseyug/applyhub/frontend:$SHORT_SHA .frontend
 
 
 
