@@ -22,10 +22,11 @@ jobs:
             node-version: 18
         - name: Install & Build frontend
           working-directory: ./frontend
-          run: | 
+          run: |
             npm ci
             npm run build
             npm run preview &
+            sleep 5
             curl http://127.0.0.1:4173
 
 
