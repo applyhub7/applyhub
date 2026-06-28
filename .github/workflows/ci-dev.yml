@@ -9,8 +9,7 @@ on:
       - 'frontend/**'
 
 env:
-  SHORT_SHA: $(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})
-  BASE_IMAGE: noseyug/applyhub/
+  PROJECT_NAME: applyhub
 
 permissions: 
   contents: read
@@ -57,6 +56,13 @@ jobs:
           run: |
             SHORT_SHA=$(git rev-parse --short=7 HEAD)
             echo "DEV_TAG=dev-$SHORT_SHA" >> $GITHUB_ENV
+
+        - name: Login Docker Hub
+          uses: docker/login-action@v3
+          with:
+            username: ${{DOCKER_USER}}
+            password: ${{DOCKER_PASS}}
+
 #Frontend            
         - name: Install & Build frontend
           if: matrix.service == 'frontend'
@@ -68,12 +74,28 @@ jobs:
             sleep 5
             curl http://127.0.0.1:4173
 
-            docker build -t ${BASE_IMAGE}frontend:${DEV_TAG} .
+        - name: Build and Push Frontend image
+          if: matrix.service == 'frontend'
+          uses: docker/build-push-action@v6
+          with:
+            context: ./frontend/
+            file: ./frontend/Dockerfile
+            push: true
+            tags: ${{DOCKER_USER}}/$PROJECT_NAME/frontend:$DEV_TAG
+
 #Backend
-        - name: Build service images
+        - name: Build and Push Backend images
           if: matrix.service != 'frontend'
-          run: |
-            docker build -t ${BASE_IMAGE}${{matrix.service}}:${DEV_TAG} ./backend/${{matrix.service}}/
+          uses: docker/build-push-action@v6
+          with:
+            context: ./backend/${{matrix.service}}/
+            file: ./backend/${{matrix.service}}/Dockerfile
+            push: true
+            tags: ${{DOCKER_USER}}/$PROJECT_NAME/${{matrix.service}}:$DEV_TAG
+
+
+
+        
 
 
           
