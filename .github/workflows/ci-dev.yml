@@ -52,7 +52,8 @@ jobs:
         if: ${{ needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' }}  
         runs-on: ubuntu-latest
         strategy:
-          matrix: ${{ fromJson(needs.detect-changes.outputs.services) }}  
+          matrix: 
+            service: ${{ fromJson(needs.detect-changes.outputs.services) }}  
         steps:
         - name: Checkout source code
           uses: actions/checkout@v4
@@ -77,7 +78,7 @@ jobs:
         - name: Build frontend image
           run: |
             SHORT_SHA=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})
-            docker build -t noseyug/applyhub/${{matrix}}:$SHORT_SHA ./${{matrix}}/
+            docker build -t noseyug/applyhub/${{matrix.service}}:$SHORT_SHA ./${{matrix.service}}/
             #docker build -t noseyug/applyhub/frontend:$SHORT_SHA ./frontend/
           
 
