@@ -20,10 +20,10 @@ jobs:
           id: filter
           with:
             filters: | 
-            application-service: 'backend/application-service/**'
-            auth-service: 'backend/auth-service/**'
-            job-service: 'backend/job-service/**'
-            api-gateway: 'backend/api-gateway/**'
+              application-service: 'backend/application-service/**'
+              auth-service: 'backend/auth-service/**'
+              job-service: 'backend/job-service/**'
+              api-gateway: 'backend/api-gateway/**'
       
     ci:        
         needs: detect-changes  
