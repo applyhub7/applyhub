@@ -1,105 +1,105 @@
-name: CI dev pipleine
+  name: CI dev pipleine
 
-on:
-  pull_request:
-    branches:
-      - dev-ci
-    paths:
-      - 'backend/**'
-      - 'frontend/**'
+  on:
+    pull_request:
+      branches:
+        - dev-ci
+      paths:
+        - 'backend/**'
+        - 'frontend/**'
 
 
 
-env:
-  PROJECT_NAME: applyhub
+  env:
+    PROJECT_NAME: applyhub
 
-permissions: 
-  contents: read
-  pull-requests: read
+  permissions: 
+    contents: read
+    pull-requests: read
 
-jobs:
-  detect-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      services: ${{ steps.filter.outputs.changes }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            application-service: 'backend/application-service/**'
-            auth-service: 'backend/auth-service/**'
-            job-service: 'backend/job-service/**'
-            api-gateway: 'backend/api-gateway/**'
-            frontend: 'frontend/**'  
-            
-  ci:        
-        needs: detect-changes  
-        if: ${{ needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' }}  
-        runs-on: ubuntu-latest
-        strategy:
-          matrix: 
-            service: ${{ fromJson(needs.detect-changes.outputs.services) }}  
-        steps:
-        - name: Checkout source code
-          uses: actions/checkout@v4
-#Setup tools          
-        - name: Setup python 3.11
-          uses: actions/setup-python@v5
+  jobs:
+    detect-changes:
+      runs-on: ubuntu-latest
+      outputs:
+        services: ${{ steps.filter.outputs.changes }}
+      steps:
+        - uses: actions/checkout@v4
+        - uses: dorny/paths-filter@v3
+          id: filter
           with:
-            python-version: 3.11
-        - name: Setup node 18    
-          uses: actions/setup-node@v4
-          with:
-            node-version: 18
+            filters: |
+              application-service: 'backend/application-service/**'
+              auth-service: 'backend/auth-service/**'
+              job-service: 'backend/job-service/**'
+              api-gateway: 'backend/api-gateway/**'
+              frontend: 'frontend/**'  
+              
+    ci:        
+          needs: detect-changes  
+          if: ${{ needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' }}  
+          runs-on: ubuntu-latest
+          strategy:
+            matrix: 
+              service: ${{ fromJson(needs.detect-changes.outputs.services) }}  
+          steps:
+          - name: Checkout source code
+            uses: actions/checkout@v4
+  #Setup tools          
+          - name: Setup python 3.11
+            uses: actions/setup-python@v5
+            with:
+              python-version: 3.11
+          - name: Setup node 18    
+            uses: actions/setup-node@v4
+            with:
+              node-version: 18
 
-        - name: Setup dev tag
-          run: |
-            SHORT_SHA=$(git rev-parse --short=7 HEAD)
-            echo "DEV_TAG=dev-$SHORT_SHA" >> $GITHUB_ENV
+          - name: Setup dev tag
+            run: |
+              SHORT_SHA=$(git rev-parse --short=7 HEAD)
+              echo "DEV_TAG=dev-$SHORT_SHA" >> $GITHUB_ENV
 
-        - name: Login Docker Hub
-          uses: docker/login-action@v3
-          with:
-            username: ${{secrets.DOCKER_USER}}
-            password: ${{secrets.DOCKER_PASS}}
+          - name: Login Docker Hub
+            uses: docker/login-action@v3
+            with:
+              username: ${{secrets.DOCKER_USER}}
+              password: ${{secrets.DOCKER_PASS}}
 
-#Frontend            
-        - name: Install & Build frontend
-          if: matrix.service == 'frontend'
-          working-directory: ./frontend
-          run: |
-            npm ci
-            npm run build
-            npm run preview &
-            sleep 5
-            curl http://127.0.0.1:4173
+  #Frontend            
+          - name: Install & Build frontend
+            if: matrix.service == 'frontend'
+            working-directory: ./frontend
+            run: |
+              npm ci
+              npm run build
+              npm run preview &
+              sleep 5
+              curl http://127.0.0.1:4173
 
-        - name: Build and Push Frontend image
-          if: matrix.service == 'frontend'
-          uses: docker/build-push-action@v6
-          with:
-            context: ./frontend/
-            file: ./frontend/Dockerfile
-            push: true
-            tags: ${{secrets.DOCKER_USER}}/${{env.PROJECT_NAME}}-frontend:${{env.DEV_TAG}}
+          - name: Build and Push Frontend image
+            if: matrix.service == 'frontend'
+            uses: docker/build-push-action@v6
+            with:
+              context: ./frontend/
+              file: ./frontend/Dockerfile
+              push: true
+              tags: ${{secrets.DOCKER_USER}}/${{env.PROJECT_NAME}}-frontend:${{env.DEV_TAG}}
 
-#Backend
-        - name: Build and Push Backend images
-          if: matrix.service != 'frontend'
-          uses: docker/build-push-action@v6
-          with:
-            context: ./backend/${{matrix.service}}/
-            file: ./backend/${{matrix.service}}/Dockerfile
-            push: true
-            tags: ${{secrets.DOCKER_USER}}/${{env.PROJECT_NAME}}-${{matrix.service}}:${{env.DEV_TAG}}
+  #Backend
+          - name: Build and Push Backend images
+            if: matrix.service != 'frontend'
+            uses: docker/build-push-action@v6
+            with:
+              context: ./backend/${{matrix.service}}/
+              file: ./backend/${{matrix.service}}/Dockerfile
+              push: true
+              tags: ${{secrets.DOCKER_USER}}/${{env.PROJECT_NAME}}-${{matrix.service}}:${{env.DEV_TAG}}
 
-
-
-        
 
 
           
 
-        
+
+            
+
+          
