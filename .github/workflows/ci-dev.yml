@@ -78,7 +78,7 @@ jobs:
         - name: Build frontend image
           run: |
             SHORT_SHA=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})
-            docker build -t noseyug/applyhub/${{matrix.service}}:$SHORT_SHA ./${{matrix.service}}/
+            docker build -t noseyug/applyhub/${{matrix.service}}:$SHORT_SHA ./backend/${{matrix.service}}/
             #docker build -t noseyug/applyhub/frontend:$SHORT_SHA ./frontend/
           
 
