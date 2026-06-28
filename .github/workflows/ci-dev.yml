@@ -19,7 +19,7 @@ jobs:
         - uses: dorny/paths-filter@v3
           id: filter
           with:
-            filter: | 
+            filters: | 
             application-service: 'backend/application-service/**'
             auth-service: 'backend/auth-service/**'
             job-service: 'backend/job-service/**'
