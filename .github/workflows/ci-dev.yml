@@ -8,22 +8,9 @@ on:
       - 'backend/**'
       - 'frontend/**'
 
-# jobs:
-#     detect-changes:
-#         runs-on: ubuntu-latest
-#         outputs:
-#           services: ${{ steps.filter.outputs.changes }}
-#         steps:
-#         - uses: actions/checkout@v4
-
-#         - uses: dorny/paths-filter@v3
-#           id: filter
-#           with:
-#             filters: | 
-#               application-service: 'backend/application-service/**'
-#               auth-service: 'backend/auth-service/**'
-#               job-service: 'backend/job-service/**'
-#               api-gateway: 'backend/api-gateway/**'
+env:
+  SHORT_SHA: $(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})
+  BASE_IMAGE: noseyug/applyhub/
 
 permissions: 
   contents: read
@@ -36,9 +23,6 @@ jobs:
       services: ${{ steps.filter.outputs.changes }}
     steps:
       - uses: actions/checkout@v4
-
-      - run: ls
-
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -47,7 +31,8 @@ jobs:
             auth-service: 'backend/auth-service/**'
             job-service: 'backend/job-service/**'
             api-gateway: 'backend/api-gateway/**'
-            frontend: 'frontend/**'      
+            frontend: 'frontend/**'  
+            
   ci:        
         needs: detect-changes  
         if: ${{ needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' }}  
@@ -58,8 +43,6 @@ jobs:
         steps:
         - name: Checkout source code
           uses: actions/checkout@v4
-
-
 #Setup tools          
         - name: Setup python 3.11
           uses: actions/setup-python@v5
@@ -70,6 +53,10 @@ jobs:
           with:
             node-version: 18
 
+        - name: Setup dev tag
+          run: |
+            SHORT_SHA=$(git rev-parse --short=7 HEAD)
+            echo "DEV_TAG=dev-$SHORT_SHA" >> $GITHUB_ENV
 #Frontend            
         - name: Install & Build frontend
           if: matrix.service == 'frontend'
@@ -81,16 +68,13 @@ jobs:
             sleep 5
             curl http://127.0.0.1:4173
 
-            SHORT_SHA=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})
-            docker build -t noseyug/applyhub/frontend:$SHORT_SHA .
-
-
+            docker build -t ${BASE_IMAGE}frontend:${DEV_TAG} .
 #Backend
         - name: Build service images
           if: matrix.service != 'frontend'
           run: |
-            SHORT_SHA=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})
-            docker build -t noseyug/applyhub/${{matrix.service}}:$SHORT_SHA ./backend/${{matrix.service}}/
+            docker build -t ${BASE_IMAGE}${{matrix.service}}:${DEV_TAG} ./backend/${{matrix.service}}/
+
 
           
 
