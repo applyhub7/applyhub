@@ -8,7 +8,7 @@ on:
       - 'backend/**'
       - 'frontend/**'
 
-environment: dev
+
 
 env:
   PROJECT_NAME: applyhub
