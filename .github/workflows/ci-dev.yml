@@ -8,9 +8,51 @@ on:
       - 'backend/**'
       - 'frontend/**'
 
+# jobs:
+#     detect-changes:
+#         runs-on: ubuntu-latest
+#         outputs:
+#           services: ${{ steps.filter.outputs.changes }}
+#         steps:
+#         - uses: actions/checkout@v4
+
+#         - uses: dorny/paths-filter@v3
+#           id: filter
+#           with:
+#             filters: | 
+#               application-service: 'backend/application-service/**'
+#               auth-service: 'backend/auth-service/**'
+#               job-service: 'backend/job-service/**'
+#               api-gateway: 'backend/api-gateway/**'
+
+permissions: 
+  contents: read
+  pull-requests: read
+
 jobs:
-    ci:
-        runs-on: ubuntu-latest        
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: ls
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            application-service: 'backend/application-service/**'
+            auth-service: 'backend/auth-service/**'
+            job-service: 'backend/job-service/**'
+            api-gateway: 'backend/api-gateway/**'      
+  ci:        
+        needs: detect-changes  
+        if: ${{ needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' }}  
+        runs-on: ubuntu-latest
+        strategy:
+          matrix: ${{ fromJson(needs.detect-changes.outputs.services) }}  
         steps:
         - name: Checkout source code
           uses: actions/checkout@v4
@@ -35,7 +77,8 @@ jobs:
         - name: Build frontend image
           run: |
             SHORT_SHA=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})
-            docker build -t noseyug/applyhub/frontend:$SHORT_SHA ./frontend/
+            docker build -t noseyug/applyhub/${{matrix}}:$SHORT_SHA ./${{matrix}}/
+            #docker build -t noseyug/applyhub/frontend:$SHORT_SHA ./frontend/
           
 
         # - name: Build frontend image   
@@ -61,63 +104,3 @@ jobs:
     #         docker build -t noseyug/applyhub/auth-service:$SHORT_SHA ./backend/auth-service/
 
 
-# name: CI Dev Pipeline
-
-# on:
-#   pull_request:
-#     branches:
-#       - dev-ci
-#     paths:
-#       - "backend/**"
-#       - ".github/workflows/ci.yml"
-
-# permissions:
-#   contents: read
-
-# # Khi PR có commit mới, hủy workflow cũ đang chạy
-# concurrency:
-#   group: ci-dev-${{ github.event.pull_request.number }}
-#   cancel-in-progress: true
-
-# jobs:
-#   build-service:
-#     name: Build ${{ matrix.service }}
-#     runs-on: ubuntu-latest
-
-#     strategy:
-#       fail-fast: false
-#       max-parallel: 2
-
-#       matrix:
-#         include:
-#           - service: application-service
-#             context: ./backend/application-service
-#             image: noseyug/applyhub/application-service
-
-#           - service: auth-service
-#             context: ./backend/auth-service
-#             image: noseyug/applyhub/auth-service
-
-#     steps:
-#       - name: Checkout source code
-#         uses: actions/checkout@v5
-
-#       - name: Set short commit SHA
-#         id: commit
-#         shell: bash
-#         run: |
-#           FULL_SHA="${{ github.event.pull_request.head.sha }}"
-#           echo "short_sha=${FULL_SHA:0:7}" >> "$GITHUB_OUTPUT"
-
-#       - name: Set up Docker Buildx
-#         uses: docker/setup-buildx-action@v4
-
-#       - name: Build ${{ matrix.service }}
-#         uses: docker/build-push-action@v7
-#         with:
-#           context: ${{ matrix.context }}
-#           push: false
-#           tags: ${{ matrix.image }}:${{ steps.commit.outputs.short_sha }}
-
-#           cache-from: type=gha,scope=${{ matrix.service }}
-#           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
