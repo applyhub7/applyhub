@@ -8,24 +8,39 @@ on:
       - 'backend/**'
       - 'frontend/**'
 
-jobs:
-    detect-changes:
-        runs-on: ubuntu-latest
-        outputs:
-          services: ${{ steps.filter.outputs.changes }}
-        steps:
-        - uses: actions/checkout@v4
+# jobs:
+#     detect-changes:
+#         runs-on: ubuntu-latest
+#         outputs:
+#           services: ${{ steps.filter.outputs.changes }}
+#         steps:
+#         - uses: actions/checkout@v4
 
-        - uses: dorny/paths-filter@v3
-          id: filter
-          with:
-            filters: | 
-              application-service: 'backend/application-service/**'
-              auth-service: 'backend/auth-service/**'
-              job-service: 'backend/job-service/**'
-              api-gateway: 'backend/api-gateway/**'
-      
-    ci:        
+#         - uses: dorny/paths-filter@v3
+#           id: filter
+#           with:
+#             filters: | 
+#               application-service: 'backend/application-service/**'
+#               auth-service: 'backend/auth-service/**'
+#               job-service: 'backend/job-service/**'
+#               api-gateway: 'backend/api-gateway/**'
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            application-service: 'backend/application-service/**'
+            auth-service: 'backend/auth-service/**'
+            job-service: 'backend/job-service/**'
+            api-gateway: 'backend/api-gateway/**'      
+  ci:        
         needs: detect-changes  
         if: ${{ needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' }}  
         runs-on: ubuntu-latest
