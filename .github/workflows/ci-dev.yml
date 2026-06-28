@@ -46,7 +46,8 @@ jobs:
             application-service: 'backend/application-service/**'
             auth-service: 'backend/auth-service/**'
             job-service: 'backend/job-service/**'
-            api-gateway: 'backend/api-gateway/**'      
+            api-gateway: 'backend/api-gateway/**'
+            frontend: 'frontend/**'      
   ci:        
         needs: detect-changes  
         if: ${{ needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' }}  
@@ -58,6 +59,8 @@ jobs:
         - name: Checkout source code
           uses: actions/checkout@v4
 
+
+#Setup tools          
         - name: Setup python 3.11
           uses: actions/setup-python@v5
           with:
@@ -66,7 +69,10 @@ jobs:
           uses: actions/setup-node@v4
           with:
             node-version: 18
+
+#Frontend            
         - name: Install & Build frontend
+          if: matrix.service == 'frontend'
           working-directory: ./frontend
           run: |
             npm ci
@@ -75,33 +81,17 @@ jobs:
             sleep 5
             curl http://127.0.0.1:4173
 
-        - name: Build frontend image
+            SHORT_SHA=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})
+            docker build -t noseyug/applyhub/frontend:$SHORT_SHA .
+
+
+#Backend
+        - name: Build service images
+          if: matrix.service != 'frontend'
           run: |
             SHORT_SHA=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})
             docker build -t noseyug/applyhub/${{matrix.service}}:$SHORT_SHA ./backend/${{matrix.service}}/
-            #docker build -t noseyug/applyhub/frontend:$SHORT_SHA ./frontend/
+
           
 
-        # - name: Build frontend image   
-        #   run:  docker build -t noseyug/applyhub/frontend:$SHORT_SHA .frontend
-
-
-
-            #docker build -t noseyug/applyhub/application-service:$SHORT_SHA ./backend/application-service/
-            #  docker build -t noseyug/applyhub/auth-service:$SHORT_SHA ./backend/auth-service/
-
-
-    # test1:
-    #     runs-on: ubuntu-latest        
-    #     steps:
-    #     - name: Checkout source code
-    #       uses: actions/checkout@v4
-    #     - name: List files
-    #       run: ls -la
-    #     - name: Build Docker image
-    #       run: |
-    #         SHORT_SHA=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})
-    #         #  docker build -t noseyug/applyhub/application-service:$SHORT_SHA ./backend/application-service/
-    #         docker build -t noseyug/applyhub/auth-service:$SHORT_SHA ./backend/auth-service/
-
-
+        
