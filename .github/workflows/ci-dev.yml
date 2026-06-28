@@ -83,7 +83,7 @@ jobs:
             context: ./frontend/
             file: ./frontend/Dockerfile
             push: true
-            tags: ${{secrets.DOCKER_USER}}/$PROJECT_NAME/frontend:$DEV_TAG
+            tags: ${{secrets.DOCKER_USER}}/$PROJECT_NAME/frontend:${{env.DEV_TAG}}
 
 #Backend
         - name: Build and Push Backend images
@@ -93,7 +93,7 @@ jobs:
             context: ./backend/${{matrix.service}}/
             file: ./backend/${{matrix.service}}/Dockerfile
             push: true
-            tags: ${{secrets.DOCKER_USER}}/$PROJECT_NAME/${{matrix.service}}:$DEV_TAG
+            tags: ${{secrets.DOCKER_USER}}/$PROJECT_NAME/${{matrix.service}}:${{env.DEV_TAG}}
 
 
 
