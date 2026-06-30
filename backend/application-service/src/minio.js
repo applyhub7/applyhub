@@ -52,3 +52,12 @@ export async function getResumeDownloadUrl(objectKey) {
     });
   });
 }
+
+export async function getResumeObject(objectKey) {
+  const bucket = applicationConfig.minio.bucket;
+  const [stat, stream] = await Promise.all([
+    minioClient.statObject(bucket, objectKey),
+    minioClient.getObject(bucket, objectKey),
+  ]);
+  return { stat, stream };
+}

@@ -34,8 +34,19 @@ export async function forward(request, reply, targetUrl, needsAuth = true) {
   const url = new URL(request.url, targetUrl);
   const body = ["GET", "HEAD"].includes(request.method) ? undefined : JSON.stringify(request.body || {});
   const upstream = await fetch(url, { method: request.method, headers, body });
-  const text = await upstream.text();
+  const contentType = upstream.headers.get("content-type") || "application/octet-stream";
   reply.code(upstream.status);
-  if (!text) return reply.send();
-  return reply.type(upstream.headers.get("content-type") || "application/json").send(JSON.parse(text));
+  reply.type(contentType);
+
+  const contentDisposition = upstream.headers.get("content-disposition");
+  if (contentDisposition) reply.header("content-disposition", contentDisposition);
+
+  if (upstream.status === 204) return reply.send();
+  if (contentType.includes("application/json")) {
+    const text = await upstream.text();
+    return reply.send(text ? JSON.parse(text) : null);
+  }
+
+  const buffer = Buffer.from(await upstream.arrayBuffer());
+  return reply.send(buffer);
 }

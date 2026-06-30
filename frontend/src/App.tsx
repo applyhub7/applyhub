@@ -117,6 +117,16 @@ export function App() {
     setRecruiterJobCounts(Object.fromEntries(counts));
   }
 
+  async function previewResume(app: Application) {
+    if (!token) return;
+    if (previewCvUrl.startsWith("blob:")) {
+      URL.revokeObjectURL(previewCvUrl);
+    }
+    const blob = await api.downloadResume(app.id, token);
+    setPreviewCvUrl(URL.createObjectURL(blob));
+    setPreviewCvName(app.resumeFileName || "CV");
+  }
+
   useEffect(() => {
     loadJobs().catch(() => null);
   }, []);
@@ -162,10 +172,21 @@ export function App() {
     if (job) {
       setSelectedRecruiterJob(job);
       loadRecruiterApplications(job.id).catch(() => null);
+      if (previewCvUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(previewCvUrl);
+      }
       setPreviewCvUrl("");
       setPreviewCvName("");
     }
   }, [route, jobs, user]);
+
+  useEffect(() => {
+    return () => {
+      if (previewCvUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(previewCvUrl);
+      }
+    };
+  }, [previewCvUrl]);
 
   useEffect(() => {
     if (token && user?.role === "recruiter") {
@@ -384,6 +405,9 @@ export function App() {
           <button
             className="topbar-action button-secondary"
             onClick={() => {
+              if (previewCvUrl.startsWith("blob:")) {
+                URL.revokeObjectURL(previewCvUrl);
+              }
               setPreviewCvUrl("");
               setPreviewCvName("");
               setSelectedRecruiterJob(null);
@@ -421,10 +445,7 @@ export function App() {
                           className={`status-item ${app.resumeDownloadUrl ? "clickable-card" : ""}`}
                           onClick={
                             app.resumeDownloadUrl
-                              ? () => {
-                                  setPreviewCvUrl(app.resumeDownloadUrl || "");
-                                  setPreviewCvName(app.resumeFileName || "CV");
-                                }
+                              ? () => previewResume(app).catch(() => setMessage("Could not load CV"))
                               : undefined
                           }
                           role={app.resumeDownloadUrl ? "button" : undefined}
