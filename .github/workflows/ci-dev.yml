@@ -69,6 +69,8 @@
           - name: Install & Build frontend
             if: matrix.service == 'frontend'
             working-directory: ./frontend
+            env:
+              VITE_API_URL: /api
             run: |
               npm ci
               npm run build
@@ -82,6 +84,8 @@
             with:
               context: ./frontend/
               file: ./frontend/Dockerfile
+              build-args: |
+                VITE_API_URL=/api
               push: true
               tags: ${{secrets.DOCKER_USER}}/${{env.PROJECT_NAME}}-frontend:${{env.DEV_TAG}}
 
