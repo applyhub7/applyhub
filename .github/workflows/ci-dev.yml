@@ -124,8 +124,8 @@
           id: tag
           run: |
             SHORT_SHA=$(git rev-parse --short=7 HEAD)
-            echo "TAG=build-${{ github.run_number }}-$SHORT_SHA" >> $GITHUB_OUTPUT
-          
+            echo "TAG=$SHORT_SHA" >> $GITHUB_OUTPUT
+
         - name: Build and Push Docker Image
           uses: docker/build-push-action@v6
           with:
