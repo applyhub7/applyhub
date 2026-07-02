@@ -187,7 +187,7 @@
               if git diff --staged --quiet; then
                 echo "No actual changes in manifests"
               else
-                git commit -m "ci: update images to [${TAG}]"
+                git commit -m "ci: update images to ${TAG}"
                 git push origin dev
                 echo "Successfully updated manifests"
               fi
