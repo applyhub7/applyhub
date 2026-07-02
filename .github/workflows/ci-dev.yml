@@ -162,9 +162,9 @@
               UPDATED=true
 
             if [[ "$service" == "frontend" ]]; then
-              FILE="./frontend/frontend-deploy.yaml"
+              FILE="./frontend/frontend-deploy.yml"
             else
-              FILE="./backend/$service/$service-deploy.yaml"
+              FILE="./backend/$service/$service-deploy.yml"
             fi
 
             yq e -i ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:${TAG}\"" "$FILE"
