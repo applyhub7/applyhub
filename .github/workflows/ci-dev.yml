@@ -163,12 +163,12 @@
 
             if [[ "$service" == "frontend" ]]; then
               FILE="./frontend/frontend-deploy.yml"
+              yq e -i ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:${TAG}\"" "$FILE"
             else
               FILE="./backend/$service/$service-deploy.yml"
+              yq e -i ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:${TAG}\"" "$FILE"
             fi
 
-            yq e -i ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:${TAG}\"" "$FILE"
-            
             git add "$FILE"
             done  
 
