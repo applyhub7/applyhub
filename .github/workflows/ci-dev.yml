@@ -181,7 +181,7 @@
             done  
 
             git config user.name "noseyug[bot]"
-            git config user.email "noseyug@github.com" 
+            git config user.email "41898282+noseyug[bot]@users.noreply.github.com"
 
             if [ "$UPDATED" = true ]; then
               if git diff --staged --quiet; then
