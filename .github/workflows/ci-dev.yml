@@ -153,7 +153,7 @@
         - name: Update Manifests 
           run: |
             cd  manifests
-            ls -la
+
             UPDATED=false
             TAG="${{ steps.tag.outputs.TAG }}"
 
@@ -163,18 +163,21 @@
               echo "Updating manifest for $service"
               UPDATED=true
 
-            if [[ "$service" == "frontend" ]]; then
-              FILE="./apps-manifests/frontend/frontend-deploy.yml"
-            elif [[ "$service" == "api-gateway" ]]; then
-              FILE="./apps-manifests/$service/api-gateway-deploy.yml"
-            else
-              FILE="./apps-manifests/$service/${service%-service}-deploy.yml"
-            fi
+              if [[ "$service" == "frontend" ]]; then
+                FILE="./apps-manifests/frontend/frontend-deploy.yml"
+              elif [[ "$service" == "api-gateway" ]]; then
+                FILE="./apps-manifests/$service/api-gateway-deploy.yml"
+              else
+                FILE="./apps-manifests/$service/${service%-service}-deploy.yml"
+              fi
 
-            if [ -f "$FILE" ]; then
-              yq -i e ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:$TAG\"" "$FILE"
-
-            git add "$FILE"
+              if [ -f "$FILE" ]; then
+                yq -i e ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:$TAG\"" "$FILE"
+                git add "$FILE"
+                echo "   ✓ Updated $FILE"
+              else
+                echo "   ⚠ File not found: $FILE"
+              fi
             done  
 
             git config user.name "github-actions[bot]"
