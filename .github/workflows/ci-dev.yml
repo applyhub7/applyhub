@@ -151,7 +151,7 @@
         - name: Update Manifests 
           run: |
             cd  manifests
-
+            ls -la
             UPDATED=false
             TAG="${{ steps.tag.outputs.TAG }}"
 
@@ -163,22 +163,21 @@
 
             if [[ "$service" == "frontend" ]]; then
               FILE="./apps-manifests/frontend/frontend-deploy.yml"
-              yq e -i ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:${TAG}\"" "$FILE"
+            elif [[ "$service" == "api-gateway" ]]; then
+              FILE="./apps-manifests/$service/api-gateway-deploy.yml"
             else
-              FILE="./apps-manifests/backend/$service/$service-deploy.yml"
-              yq e -i ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:${TAG}\"" "$FILE"
+              FILE="./apps-manifests/$service/${service%-service}-deploy.yml"
             fi
+
+            if [ -f "$FILE" ]; then
+              yq -i e ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:$TAG\"" "$FILE"
 
             git add "$FILE"
             done  
-
-
+            
             git config user.name "github-actions[bot]"
             git config user.email "actions@github.com" 
 
-            done
-
-            # Chỉ commit nếu có thay đổi
             if [ "$UPDATED" = true ]; then
               if git diff --staged --quiet; then
                 echo "No actual changes in manifests"
