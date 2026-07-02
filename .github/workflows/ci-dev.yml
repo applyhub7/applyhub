@@ -180,7 +180,7 @@
               fi
             done  
 
-            git config user.name "noseyug[bot]"
+            git config user.name "github-actions[bot]"
             git config user.email "41898282+noseyug[bot]@users.noreply.github.com"
 
             if [ "$UPDATED" = true ]; then
