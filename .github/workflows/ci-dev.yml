@@ -153,6 +153,7 @@
             cd  manifests
 
             UPDATED=false
+            TAG="${{ steps.tag.outputs.TAG }}"
 
             for service in $(echo '${{ needs.detect-changes.outputs.services }}' | jq -r '.[]' 2>/dev/null || echo ""); do
               if [ -z "$service" ]; then continue; fi
@@ -166,7 +167,7 @@
               FILE="./backend/$service/$service-deploy.yaml"
             fi
 
-            yq e -i ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:${{ steps.tag.outputs.TAG }}\"" "$FILE"
+            yq e -i ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:${TAG}\"" "$FILE"
             
             git add "$FILE"
             done  
