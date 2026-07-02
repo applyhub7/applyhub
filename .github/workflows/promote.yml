@@ -1,0 +1,62 @@
+name: Promote with Re-tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_env:
+        description: 'Từ môi trường'
+        required: true
+        type: choice
+        options: [dev-ci]
+      target_env:
+        description: 'Đến môi trường'
+        required: true
+        type: choice
+        options: [main-ci]
+      version:
+        description: 'Phiên bản (ví dụ: 1.0.0)'
+        required: true
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: applyhub7/applyhub-manifests
+          token: ${{ secrets.GITOPS_PAT }}
+          path: gitops
+
+      - name: Re-tag and Promote
+        run: |
+          VERSION="${{ inputs.version }}"
+          if [[ "${{ inputs.target_env }}" == "main-ci" ]]; then
+            NEW_TAG="v${VERSION}"
+          else
+            NEW_TAG="v${VERSION}-rc.1"
+          fi
+
+          echo "🚀 Promoting from ${{ inputs.source_env }} to ${{ inputs.target_env }}"
+          echo "📦 New tag: $NEW_TAG"
+
+          cd gitops
+
+          for service in api-gateway frontend job-service auth-service; do
+            SRC="apps-manifests/$service/${{ inputs.source_env }}/$service-deploy.yml"
+            DST="apps-manifests/$service/${{ inputs.target_env }}/$service-deploy.yml"
+            
+            if [ -f "$SRC" ]; then
+              cp "$SRC" "$DST"
+              # Re-tag image
+              yq -i e ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:$NEW_TAG\"" "$DST"
+              echo "✓ Promoted $service → $NEW_TAG"
+            fi
+          done
+
+          git config user.name "noseyug-bot"
+          git config user.email "noseyug-bot@users.noreply.github.com"
+          git add .
+          git commit -m "promote: ${{ inputs.source_env }} → ${{ inputs.target_env }} (v${VERSION})"
+          git push
+
+          echo "✅ Promotion completed successfully!"
