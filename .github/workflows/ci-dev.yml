@@ -103,7 +103,7 @@
 
     build-and-push:
       needs: [detect-changes, test]
-      if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
+      if: github.ref == 'refs/heads/dev-ci' && github.event_name == 'push'
       runs-on: ubuntu-latest
       strategy:
         matrix: 
