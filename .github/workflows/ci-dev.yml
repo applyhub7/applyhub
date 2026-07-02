@@ -139,7 +139,7 @@
         - name: Checkout Manifests Repo
           uses: actions/checkout@v4
           with:
-            repository: https://github.com/applyhub7/applyhub-manifests
+            repository: applyhub7/applyhub-manifests
             token: ${{ secrets._GITHUB_TOKEN }}
             path: manifests
             ref: dev
