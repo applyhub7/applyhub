@@ -136,7 +136,57 @@
             cache-from: type=gha
             cache-to: type=gha,mode=max
 
+        - name: Checkout Manifests Repo
+          uses: actions/checkout@v4
+          with:
+            repository: https://github.com/applyhub7/applyhub-manifests
+            token: ${{ secrets._GITHUB_TOKEN }}
+            path: manifests
+            ref: dev
+        
+        - name: Install yq
+          run: sudo snap install yq
+
+            
+        - name: Update Manifests 
+          run: |
+            cd  manifests
+
+            UPDATED=false
+
+            for service in $(echo '${{ needs.detect-changes.outputs.services }}' | jq -r '.[]' 2>/dev/null || echo ""); do
+              if [ -z "$service" ]; then continue; fi
+
+              echo "Updating manifest for $service"
+              UPDATED=true
+
+            if [[ "$service" == "frontend" ]]; then
+              FILE="./frontend/frontend-deploy.yaml"
+            else
+              FILE="./backend/$service/$service-deploy.yaml"
+            fi
+
+            yq e -i ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:${{ steps.tag.outputs.TAG }}\"" "$FILE"
+            
+            git add "$FILE"
+            done  
 
 
+            git config user.name "github-actions[bot]"
+            git config user.email "actions@github.com" 
 
-     
+            done
+
+            # Chỉ commit nếu có thay đổi
+            if [ "$UPDATED" = true ]; then
+              if git diff --staged --quiet; then
+                echo "No actual changes in manifests"
+              else
+                git commit -m "ci: update images to [${TAG}]"
+                git push origin dev
+                echo "Successfully updated manifests"
+              fi
+            else
+              echo "No services changed, skipping update"
+            fi
+
