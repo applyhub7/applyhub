@@ -56,14 +56,13 @@ jobs:
           for service in api-gateway frontend application-service job-service auth-service; do
             FILENAME="$service-deploy.yml"
 
-            #SRC_FILE="apps-manifests-manifests/$service/${{ inputs.source_env }}/$FILENAME"
-            #DST_FILE="apps-manifests-manifests/$service/${{ inputs.target_env }}/$FILENAME"
-            SRC_FILE="apps-manifests-manifests/$service/dev/$FILENAME"
-            DST_FILE="apps-manifests-manifests-manifests/$service/main/$FILENAME"
+            SRC_FILE="apps-manifests/$service/dev/$FILENAME"
+            DST_FILE="apps-manifests/$service/main/$FILENAME"
 
             if [ -f "$SRC_FILE" ]; then
               CURRENT_TAG=$(yq e '.spec.template.spec.containers[0].image' "$SRC_FILE" | cut -d':' -f2)
 
+              # So sánh với SHA từ Application Repo
               if [[ "$CURRENT_TAG" == *"$APP_SHA"* ]]; then
                 IMAGE="${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service"
 
@@ -81,12 +80,3 @@ jobs:
               fi
             fi
           done
-
-          git config user.name "noseyug-bot"
-          git config user.email "noseyug-bot@users.noreply.github.com"
-          git commit -m "promote: ${{ inputs.source_env }} → ${{ inputs.target_env }} (v${VERSION}) [skip ci]" || echo "No change"
-          git pull origin main --rebase
-          git push origin main
-
-          git tag -a "v${VERSION}" -m "Release v${VERSION}"
-          git push origin "v${VERSION}"
