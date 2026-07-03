@@ -21,11 +21,18 @@ jobs:
   promote:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Application Repo (nếu cần)      
+        uses: actions/checkout@v4
+        with:
+          repository: applyhub7/applyhub-manifests
+          ref: ${{ inputs.source_env }}
+          path: app-code
       - uses: actions/checkout@v4
         with:
           repository: applyhub7/applyhub-manifests
           token: ${{ secrets._GITHUB_TOKEN }}
           path: manifests
+
 
       - name: Install regctl
         run: |
@@ -35,7 +42,7 @@ jobs:
       - name: Get Latest SHA from Source Branch
         id: source-sha
         run: |
-          cd manifests
+          cd app-code
           git fetch origin ${{ inputs.source_env }}
           LATEST_SHA=$(git rev-parse --short=7 origin/${{ inputs.source_env }})
           echo "SOURCE_SHA=$LATEST_SHA" >> $GITHUB_ENV
