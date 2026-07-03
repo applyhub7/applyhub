@@ -49,9 +49,9 @@ jobs:
           echo "APP_SHA=$SHORT_SHA" >> $GITHUB_ENV
           echo "Application SHA: $SHORT_SHA"
 
-      - name: Login to DockerHub for regctl
+      - name: Login regctl
         run: |
-          echo ${{ secrets.DOCKER_PASS }} | regctl registry login docker.io -u ${{ secrets.DOCKER_USER }} --password-stdin
+          echo "${{ secrets.DOCKER_PASS }}" | regctl registry login docker.io -u "${{ secrets.DOCKER_USER }}" --password-stdin
 
       - name: Promote Changed Services
         run: |
