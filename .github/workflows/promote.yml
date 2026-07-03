@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: applyhub7/applyhub-manifests
-          token: ${{ secrets._GITHUB_PAT }}
+          token: ${{ secrets._GITHUB_TOKEN }}
           path: manifests
 
       - name: Install regctl
