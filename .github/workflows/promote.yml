@@ -56,10 +56,10 @@ jobs:
           for service in api-gateway frontend application-service job-service auth-service; do
             FILENAME="$service-deploy.yml"
 
-            #SRC_FILE="apps/$service/${{ inputs.source_env }}/$FILENAME"
-            #DST_FILE="apps/$service/${{ inputs.target_env }}/$FILENAME"
-            SRC_FILE="apps/$service/dev/$FILENAME"
-            DST_FILE="apps/$service/main/$FILENAME"
+            #SRC_FILE="apps-manifests-manifests/$service/${{ inputs.source_env }}/$FILENAME"
+            #DST_FILE="apps-manifests-manifests/$service/${{ inputs.target_env }}/$FILENAME"
+            SRC_FILE="apps-manifests-manifests/$service/dev/$FILENAME"
+            DST_FILE="apps-manifests-manifests-manifests/$service/main/$FILENAME"
 
             if [ -f "$SRC_FILE" ]; then
               CURRENT_TAG=$(yq e '.spec.template.spec.containers[0].image' "$SRC_FILE" | cut -d':' -f2)
