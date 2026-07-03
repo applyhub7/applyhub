@@ -21,32 +21,30 @@ jobs:
   promote:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Application Repo (nếu cần)      
+      - name: Checkout Application Repo
+        uses: actions/checkout@v4
+        with:
+          path: app-source
+
+      - name: Checkout GitOps Repo
         uses: actions/checkout@v4
         with:
           repository: applyhub7/applyhub-manifests
-          ref: ${{ inputs.source_env }}
-          path: app-code
-      - uses: actions/checkout@v4
-        with:
-          repository: applyhub7/applyhub-manifests
-          token: ${{ secrets._GITHUB_TOKEN }}
+          token: ${{ secrets._GITHUB_PAT }}
           path: manifests
-
 
       - name: Install regctl
         run: |
           curl -L https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64 > /usr/local/bin/regctl
           chmod +x /usr/local/bin/regctl
 
-      - name: Get Latest SHA from Source Branch
-        id: source-sha
+      - name: Get Latest SHA from Application Repo
+        id: app-sha
         run: |
-          cd app-code
-          git fetch origin ${{ inputs.source_env }}
-          LATEST_SHA=$(git rev-parse --short=7 origin/${{ inputs.source_env }})
-          echo "SOURCE_SHA=$LATEST_SHA" >> $GITHUB_ENV
-          echo "Latest SHA from ${{ inputs.source_env }}: $LATEST_SHA"
+          cd app-source
+          SHORT_SHA=$(git rev-parse --short=7 HEAD)
+          echo "APP_SHA=$SHORT_SHA" >> $GITHUB_ENV
+          echo "Application SHA: $SHORT_SHA"
 
       - name: Promote Changed Services
         run: |
@@ -64,11 +62,10 @@ jobs:
             if [ -f "$SRC_FILE" ]; then
               CURRENT_TAG=$(yq e '.spec.template.spec.containers[0].image' "$SRC_FILE" | cut -d':' -f2)
 
-              # So sánh với Latest SHA từ source branch
-              if [[ "$CURRENT_TAG" == *"$SOURCE_SHA"* ]]; then
+              if [[ "$CURRENT_TAG" == *"$APP_SHA"* ]]; then
                 IMAGE="${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service"
 
-                echo "→ $service changed (SHA: $SOURCE_SHA) → Re-tagging to $NEW_TAG"
+                echo "→ $service changed (SHA: $APP_SHA) → Re-tagging to $NEW_TAG"
 
                 regctl image copy $IMAGE:$CURRENT_TAG $IMAGE:$NEW_TAG
 
@@ -83,8 +80,8 @@ jobs:
             fi
           done
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+noseyug[bot]@users.noreply.github.com"
+          git config user.name "noseyug-bot"
+          git config user.email "noseyug-bot@users.noreply.github.com"
           git commit -m "promote: ${{ inputs.source_env }} → ${{ inputs.target_env }} (v${VERSION}) [skip ci]" || echo "No change"
           git pull origin ${{ inputs.target_env }} --rebase
           git push origin ${{ inputs.target_env }}
