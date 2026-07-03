@@ -82,7 +82,7 @@ jobs:
 
                 regctl image copy $IMAGE:$CURRENT_TAG $IMAGE:$NEW_TAG
 
-                cp "$SRC_FILE" "$DST_FILE"
+                #cp "$SRC_FILE" "$DST_FILE"
                 yq -i e ".spec.template.spec.containers[0].image = \"$IMAGE:$NEW_TAG\"" "$DST_FILE"
                 git add "$DST_FILE"
 
