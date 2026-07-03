@@ -7,3 +7,6 @@ const app = Fastify({ logger: { level: applicationConfig.isProduction ? "info" :
 await initApplicationDb();
 await applicationRoutes(app);
 app.listen({ port: applicationConfig.port, host: "0.0.0.0" });
+
+
+//test
