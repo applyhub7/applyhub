@@ -4,11 +4,11 @@
     pull_request:
       branches: [ dev-ci ]
       types: [ opened, synchronize, reopened ]
-      paths: [ backend/**', 'frontend/**' ]
+      paths: [ 'backend/**', 'frontend/**' ]
       
     push:
       branches: [ dev-ci ]
-      paths: [ backend/**',  'frontend/**' ] 
+      paths: [ 'backend/**',  'frontend/**' ] 
 
     workflow_dispatch:
 
