@@ -51,7 +51,7 @@ jobs:
 
       - name: Login to DockerHub for regctl
         run: |
-          echo ${{ secrets.DOCKER_PASS }} | regctl registry login docker.io -u ${{ secrets.DOCKER_USER }} --pass-stdin
+          echo ${{ secrets.DOCKER_PASS }} | regctl registry login docker.io -u ${{ secrets.DOCKER_USER }} -p
 
       - name: Promote Changed Services
         run: |
