@@ -50,8 +50,10 @@ jobs:
           echo "Application SHA: $SHORT_SHA"
 
       - name: Login to DockerHub for regctl
-        run: |
-          echo ${{ secrets.DOCKER_PASS }} | regctl registry login docker.io -u ${{ secrets.DOCKER_USER }} -p
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
 
       - name: Promote Changed Services
         run: |
