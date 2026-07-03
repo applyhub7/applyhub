@@ -1,5 +1,8 @@
 name: Promote to Environment
 
+env:
+    PROJECT_NAME: applyhub
+
 on:
   workflow_dispatch:
     inputs:
@@ -67,6 +70,7 @@ jobs:
               
 
                 IMAGE="${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-${service}"
+                
 
                 echo "→ $service changed (SHA: $APP_SHA) → Re-tagging to $NEW_TAG"
 
