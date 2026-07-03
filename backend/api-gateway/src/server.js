@@ -15,3 +15,5 @@ if (!gatewayConfig.isProduction) {
 
 await gatewayRoutes(app);
 app.listen({ port: gatewayConfig.port, host: "0.0.0.0" });
+
+// test ci
