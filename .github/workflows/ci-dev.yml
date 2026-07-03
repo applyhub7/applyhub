@@ -2,13 +2,13 @@
 
   on:
     pull_request:
-      branches: [ dev-ci, main-ci ]
-      types: [opened, synchronize, reopened]
-      paths: [backend/**', 'frontend/**']
+      branches: [ dev-ci ]
+      types: [ opened, synchronize, reopened ]
+      paths: [ backend/**', 'frontend/**' ]
       
     push:
-      branches: [ dev-ci]
-      paths: [backend/**', 'frontend/**'] 
+      branches: [ dev-ci ]
+      paths: [ backend/**', 'frontend/**' ] 
 
     workflow_dispatch:
 
@@ -142,7 +142,7 @@
             repository: applyhub7/applyhub-manifests
             token: ${{ secrets._GITHUB_TOKEN }}
             path: manifests
-            ref: dev
+            ref: main
         
         - name: Install yq
           run: |
@@ -163,13 +163,7 @@
               echo "Updating manifest for $service"
               UPDATED=true
 
-              if [[ "$service" == "frontend" ]]; then
-                FILE="./apps-manifests/frontend/frontend-deploy.yml"
-              elif [[ "$service" == "api-gateway" ]]; then
-                FILE="./apps-manifests/$service/api-gateway-deploy.yml"
-              else
-                FILE="./apps-manifests/$service/${service%-service}-deploy.yml"
-              fi
+              FILE="./apps-manifests/$service/dev/$service-deploy.yml"
 
               if [ -f "$FILE" ]; then
                 yq -i e ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:$TAG\"" "$FILE"
