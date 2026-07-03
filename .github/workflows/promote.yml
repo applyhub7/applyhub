@@ -1,8 +1,18 @@
-name: Promote to Main
+name: Promote to Environment
 
 on:
   workflow_dispatch:
     inputs:
+      source_env:
+        description: 'Từ môi trường'
+        required: true
+        type: choice
+        options: [dev, dev-ci]
+      target_env:
+        description: 'Đến môi trường'
+        required: true
+        type: choice
+        options: [main, main-ci]
       version:
         description: 'Phiên bản (ví dụ: 1.0.0)'
         required: true
@@ -22,42 +32,55 @@ jobs:
           curl -L https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64 > /usr/local/bin/regctl
           chmod +x /usr/local/bin/regctl
 
-      - name: Promote to Main
+      - name: Get Latest SHA from Source Branch
+        id: source-sha
+        run: |
+          cd manifests
+          git fetch origin ${{ inputs.source_env }}
+          LATEST_SHA=$(git rev-parse --short=7 origin/${{ inputs.source_env }})
+          echo "SOURCE_SHA=$LATEST_SHA" >> $GITHUB_ENV
+          echo "Latest SHA from ${{ inputs.source_env }}: $LATEST_SHA"
+
+      - name: Promote Changed Services
         run: |
           VERSION="${{ inputs.version }}"
           NEW_TAG="v${VERSION}"
-          
 
           cd manifests
 
           for service in api-gateway frontend application-service job-service auth-service; do
-            # Xác định tên file
-              FILENAME="$service-deploy.yml"
+            FILENAME="$service-deploy.yml"
 
+            SRC_FILE="apps/$service/${{ inputs.source_env }}/$FILENAME"
+            DST_FILE="apps/$service/${{ inputs.target_env }}/$FILENAME"
 
-            DEV_FILE="apps/$service/dev/$FILENAME"
-            MAIN_FILE="apps/$service/main/$FILENAME"
+            if [ -f "$SRC_FILE" ]; then
+              CURRENT_TAG=$(yq e '.spec.template.spec.containers[0].image' "$SRC_FILE" | cut -d':' -f2)
 
-            if [ -f "$DEV_FILE" ]; then
-              echo "Promoting $service"
+              # So sánh với Latest SHA từ source branch
+              if [[ "$CURRENT_TAG" == *"$SOURCE_SHA"* ]]; then
+                IMAGE="${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service"
 
-              # Re-tag
-              OLD_TAG=$(yq e '.spec.template.spec.containers[0].image' "$DEV_FILE" | cut -d':' -f2)
-              IMAGE="${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service"
-              regctl image copy $IMAGE:$OLD_TAG $IMAGE:$NEW_TAG
+                echo "→ $service changed (SHA: $SOURCE_SHA) → Re-tagging to $NEW_TAG"
 
-              # Update manifest
-              cp "$DEV_FILE" "$MAIN_FILE"
-              yq -i e ".spec.template.spec.containers[0].image = \"$IMAGE:$NEW_TAG\"" "$MAIN_FILE"
-              git add "$MAIN_FILE"
+                regctl image copy $IMAGE:$CURRENT_TAG $IMAGE:$NEW_TAG
+
+                cp "$SRC_FILE" "$DST_FILE"
+                yq -i e ".spec.template.spec.containers[0].image = \"$IMAGE:$NEW_TAG\"" "$DST_FILE"
+                git add "$DST_FILE"
+
+                echo "✓ Promoted $service"
+              else
+                echo "→ $service no change"
+              fi
             fi
           done
 
-          git config user.name "noseyug-bot"
-          git config user.email "noseyug-bot@users.noreply.github.com"
-          git commit -m "promote: dev-ci → main-ci (v${VERSION}) [skip ci]" || echo "No change"
-          git pull origin main-ci --rebase
-          git push origin main-ci
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+noseyug[bot]@users.noreply.github.com"
+          git commit -m "promote: ${{ inputs.source_env }} → ${{ inputs.target_env }} (v${VERSION}) [skip ci]" || echo "No change"
+          git pull origin ${{ inputs.target_env }} --rebase
+          git push origin ${{ inputs.target_env }}
 
           git tag -a "v${VERSION}" -m "Release v${VERSION}"
           git push origin "v${VERSION}"
