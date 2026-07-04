@@ -149,43 +149,100 @@
               wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
               chmod +x /usr/local/bin/yq
 
-            
-        - name: Update Manifests 
+        - name: Promote Changed Services
           run: |
-            cd  manifests
+              VERSION="${{ inputs.version }}"
+              NEW_TAG="v${VERSION}"
+              UPDATED=false
 
-            UPDATED=false
-            TAG="${{ steps.tag.outputs.TAG }}"
+              cd manifests
 
-            for service in $(echo '${{ needs.detect-changes.outputs.services }}' | jq -r '.[]' 2>/dev/null || echo ""); do
-              if [ -z "$service" ]; then continue; fi
+              for service in api-gateway frontend application-service job-service auth-service; do
+                FILENAME="$service-deploy.yml"
 
-              echo "Updating manifest for $service"
-              UPDATED=true
+                SRC_FILE="apps-manifests/$service/dev/$FILENAME"
+                DST_FILE="apps-manifests/$service/main/$FILENAME"
 
-              FILE="./apps-manifests/$service/dev/$service-deploy.yml"
+                if [ -f "$SRC_FILE" ]; then
+                  CURRENT_TAG=$(yq e '.spec.template.spec.containers[0].image' "$SRC_FILE" | cut -d':' -f2)
 
-              if [ -f "$FILE" ]; then
-                yq -i e ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:$TAG\"" "$FILE"
-                git add "$FILE"
-                echo "   ✓ Updated $FILE"
+                  if [[ "$CURRENT_TAG" == *"$APP_SHA"* ]]; then
+                    IMAGE="${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-${service}"
+
+                    echo "→ $service changed (SHA: $APP_SHA) → Re-tagging to $NEW_TAG"
+
+                    regctl image copy $IMAGE:$CURRENT_TAG $IMAGE:$NEW_TAG
+
+                    cp "$SRC_FILE" "$DST_FILE"
+                    yq -i e ".spec.template.spec.containers[0].image = \"$IMAGE:$NEW_TAG\"" "$DST_FILE"
+                    git add "$DST_FILE"
+
+                    UPDATED=true
+                    echo "✓ Promoted $service"
+                  else
+                    echo "→ $service no change"
+                  fi
+                fi
+              done
+
+              # Commit nếu có thay đổi
+              git config user.name "noseyug-bot"
+              git config user.email "noseyug-bot@users.noreply.github.com"
+
+              if [ "$UPDATED" = true ]; then
+                if git diff --staged --quiet; then
+                  echo "No actual changes in manifests"
+                else
+                  git commit -m "promote: dev → main (v${VERSION}) [skip ci]"
+                  git pull origin main --rebase
+                  git push origin main
+
+                  git tag -a "v${VERSION}" -m "Release v${VERSION}"
+                  git push origin "v${VERSION}"
+
+                  echo "✅ Promotion completed successfully!"
+                fi
               else
-                echo "   ⚠ File not found: $FILE"
+                echo "No services changed, skipping update"
               fi
-            done  
+              
+        # - name: Update Manifests 
+        #   run: |
+        #     cd  manifests
 
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+noseyug[bot]@users.noreply.github.com"
+        #     UPDATED=false
+        #     TAG="${{ steps.tag.outputs.TAG }}"
 
-            if [ "$UPDATED" = true ]; then
-              if git diff --staged --quiet; then
-                echo "No actual changes in manifests"
-              else
-                git commit -m "ci: update images to ${TAG}"
-                git push origin main
-                echo "Successfully updated manifests"
-              fi
-            else
-              echo "No services changed, skipping update"
-            fi
+        #     for service in $(echo '${{ needs.detect-changes.outputs.services }}' | jq -r '.[]' 2>/dev/null || echo ""); do
+        #       if [ -z "$service" ]; then continue; fi
 
+        #       echo "Updating manifest for $service"
+        #       UPDATED=true
+
+        #       FILE="./apps-manifests/$service/dev/$service-deploy.yml"
+
+        #       if [ -f "$FILE" ]; then
+        #         yq -i e ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:$TAG\"" "$FILE"
+        #         git add "$FILE"
+        #         echo "   ✓ Updated $FILE"
+        #       else
+        #         echo "   ⚠ File not found: $FILE"
+        #       fi
+        #     done  
+
+        #     git config user.name "github-actions[bot]"
+        #     git config user.email "41898282+noseyug[bot]@users.noreply.github.com"
+
+        #     if [ "$UPDATED" = true ]; then
+        #       if git diff --staged --quiet; then
+        #         echo "No actual changes in manifests"
+        #       else
+        #         git commit -m "ci: update images to ${TAG}"
+        #         git push origin main
+        #         echo "Successfully updated manifests"
+        #       fi
+        #     else
+        #       echo "No services changed, skipping update"
+        #     fi
+
+        
