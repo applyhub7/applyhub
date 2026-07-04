@@ -67,47 +67,103 @@ jobs:
             FILENAME="$service-deploy.yml"
 
             SRC_FILE="apps-manifests/$service/dev/$FILENAME"
-            DST_FILE="apps-manifests/$service/prod/$FILENAME"
+            DST_FILE="apps-manifests/$service/main/$FILENAME"
 
             if [ -f "$SRC_FILE" ]; then
               CURRENT_TAG=$(yq e '.spec.template.spec.containers[0].image' "$SRC_FILE" | cut -d':' -f2)
 
-              # So sánh với SHA từ Application Repo
               if [[ "$CURRENT_TAG" == *"$APP_SHA"* ]]; then
-              
-
                 IMAGE="${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-${service}"
-                
 
                 echo "→ $service changed (SHA: $APP_SHA) → Re-tagging to $NEW_TAG"
 
                 regctl image copy $IMAGE:$CURRENT_TAG $IMAGE:$NEW_TAG
 
+                cp "$SRC_FILE" "$DST_FILE"
                 yq -i e ".spec.template.spec.containers[0].image = \"$IMAGE:$NEW_TAG\"" "$DST_FILE"
                 git add "$DST_FILE"
 
-                echo "✓ Promoted $service"
                 UPDATED=true
-                echo "$UPDATED"
+                echo "✓ Promoted $service"
               else
                 echo "→ $service no change"
-                UPDATED=false
               fi
             fi
           done
 
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+noseyug[bot]@users.noreply.github.com"
+          # Commit nếu có thay đổi
+          git config user.name "noseyug-bot"
+          git config user.email "noseyug-bot@users.noreply.github.com"
 
           if [ "$UPDATED" = true ]; then
             if git diff --staged --quiet; then
               echo "No actual changes in manifests"
             else
-              git commit -m "ci: update images to $NEW_TAG"
+              git commit -m "promote: dev → main (v${VERSION}) [skip ci]"
+              git pull origin main --rebase
               git push origin main
-              echo "Successfully updated manifests"
+
+              git tag -a "v${VERSION}" -m "Release v${VERSION}"
+              git push origin "v${VERSION}"
+
+              echo "✅ Promotion completed successfully!"
             fi
           else
-              echo "No services changed, skipping update"
+            echo "No services changed, skipping update"
           fi
+      #  - name: Promote Changed Services
+      #   run: |
+      #     VERSION="${{ inputs.version }}"
+      #     NEW_TAG="v${VERSION}"
+      #     UPDATED=false
+
+      #     cd manifests
+
+      #     for service in api-gateway frontend application-service job-service auth-service; do
+      #       FILENAME="$service-deploy.yml"
+
+      #       SRC_FILE="apps-manifests/$service/dev/$FILENAME"
+      #       DST_FILE="apps-manifests/$service/prod/$FILENAME"
+
+      #       if [ -f "$SRC_FILE" ]; then
+      #         CURRENT_TAG=$(yq e '.spec.template.spec.containers[0].image' "$SRC_FILE" | cut -d':' -f2)
+
+      #         # So sánh với SHA từ Application Repo
+      #         if [[ "$CURRENT_TAG" == *"$APP_SHA"* ]]; then
+              
+
+      #           IMAGE="${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-${service}"
+                
+
+      #           echo "→ $service changed (SHA: $APP_SHA) → Re-tagging to $NEW_TAG"
+
+      #           regctl image copy $IMAGE:$CURRENT_TAG $IMAGE:$NEW_TAG
+
+      #           yq -i e ".spec.template.spec.containers[0].image = \"$IMAGE:$NEW_TAG\"" "$DST_FILE"
+      #           git add "$DST_FILE"
+
+      #           echo "✓ Promoted $service"
+      #           UPDATED=true
+      #           echo "$UPDATED"
+      #         else
+      #           echo "→ $service no change"
+      #           UPDATED=false
+      #         fi
+      #       fi
+      #     done
+
+
+      #     git config user.name "github-actions[bot]"
+      #     git config user.email "41898282+noseyug[bot]@users.noreply.github.com"
+
+      #     if [ "$UPDATED" = true ]; then
+      #       if git diff --staged --quiet; then
+      #         echo "No actual changes in manifests"
+      #       else
+      #         git commit -m "ci: update images to $NEW_TAG"
+      #         git push origin main
+      #         echo "Successfully updated manifests"
+      #       fi
+      #     else
+      #         echo "No services changed, skipping update"
+      #     fi
