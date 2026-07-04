@@ -59,6 +59,7 @@ jobs:
         run: |
           VERSION="${{ inputs.version }}"
           NEW_TAG="v${VERSION}"
+          UPDATED=false
 
           cd manifests
 
@@ -87,8 +88,26 @@ jobs:
                 git add "$DST_FILE"
 
                 echo "✓ Promoted $service"
+                UPDATED=true
               else
                 echo "→ $service no change"
+                UPDATED=false
               fi
             fi
           done
+
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+noseyug[bot]@users.noreply.github.com"
+
+            if [ "$UPDATED" = true ]; then
+              if git diff --staged --quiet; then
+                echo "No actual changes in manifests"
+              else
+                git commit -m "ci: update images to ${TAG}"
+                git push origin main
+                echo "Successfully updated manifests"
+              fi
+            else
+              echo "No services changed, skipping update"
+            fi
