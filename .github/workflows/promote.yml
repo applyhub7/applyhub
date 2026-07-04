@@ -97,17 +97,17 @@ jobs:
           done
 
 
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+noseyug[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+noseyug[bot]@users.noreply.github.com"
 
-            if [ "$UPDATED" = true ]; then
-              if git diff --staged --quiet; then
-                echo "No actual changes in manifests"
-              else
-                git commit -m "ci: update images to $NEW_TAG"
-                git push origin main
-                echo "Successfully updated manifests"
-              fi
+          if [ "$UPDATED" = true ]; then
+            if git diff --staged --quiet; then
+              echo "No actual changes in manifests"
             else
-              echo "No services changed, skipping update"
+              git commit -m "ci: update images to $NEW_TAG"
+              git push origin main
+              echo "Successfully updated manifests"
             fi
+          else
+              echo "No services changed, skipping update"
+          fi
