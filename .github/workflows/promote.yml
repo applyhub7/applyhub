@@ -83,12 +83,12 @@ jobs:
 
                 regctl image copy $IMAGE:$CURRENT_TAG $IMAGE:$NEW_TAG
 
-                #cp "$SRC_FILE" "$DST_FILE"
                 yq -i e ".spec.template.spec.containers[0].image = \"$IMAGE:$NEW_TAG\"" "$DST_FILE"
                 git add "$DST_FILE"
 
                 echo "✓ Promoted $service"
                 UPDATED=true
+                echo "$UPDATED"
               else
                 echo "→ $service no change"
                 UPDATED=false
@@ -104,7 +104,7 @@ jobs:
               if git diff --staged --quiet; then
                 echo "No actual changes in manifests"
               else
-                git commit -m "ci: update images to ${TAG}"
+                git commit -m "ci: update images to $NEW_TAG"
                 git push origin main
                 echo "Successfully updated manifests"
               fi
