@@ -104,6 +104,9 @@ jobs:
               git pull origin main --rebase
               git push origin main
 
+
+              cd ../app-source
+
               git tag -a "v${VERSION}" -m "Release v${VERSION}"
               git push origin "v${VERSION}"
 
