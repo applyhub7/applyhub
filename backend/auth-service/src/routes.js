@@ -2,8 +2,15 @@ import { loginUser, logoutUser, refreshAccessToken, registerUser, verifyAccessTo
 import { authConfig } from "./config.js";
 
 export async function authRoutes(app) {
-  app.get("/health", async () => ({ ok: true, service: "auth", environment: authConfig.nodeEnv }));
-
+  // app.get("/health", async () => ({ ok: true, service: "auth", environment: authConfig.nodeEnv }));
+  app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "healthy",
+    service: "auth-service",
+    // environment: process.env.NODE_ENV || "production",
+    uptime: process.uptime()
+  });
+});
   app.post("/auth/register", async (req, res) => {
     const result = await registerUser(req.body || {});
     if (result.error) return res.status(result.error.status).json({ message: result.error.message });
