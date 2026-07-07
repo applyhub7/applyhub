@@ -105,10 +105,10 @@ jobs:
               git push origin main
 
 
-              cd ../app-source
+              # cd ../app-source
 
-              git tag -a "v${VERSION}" -m "Release v${VERSION}"
-              git push origin "v${VERSION}"
+              # git tag -a "v${VERSION}" -m "Release v${VERSION}"
+              # git push origin "v${VERSION}"
 
               echo "✅ Promotion completed successfully!"
             fi
