@@ -2,7 +2,6 @@ import { loginUser, logoutUser, refreshAccessToken, registerUser, verifyAccessTo
 import { authConfig } from "./config.js";
 
 export async function authRoutes(app) {
-  // app.get("/health", async () => ({ ok: true, service: "auth", environment: authConfig.nodeEnv }));
   app.get("/health", (req, res) => {
   res.status(200).json({
     status: "healthy",
