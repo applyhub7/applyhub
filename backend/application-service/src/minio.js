@@ -7,6 +7,7 @@ const minioClient = new Minio.Client({
   useSSL: applicationConfig.minio.useSSL,
   accessKey: applicationConfig.minio.accessKey,
   secretKey: applicationConfig.minio.secretKey,
+  region: applicationConfig.minio.region
 });
 
 export async function ensureCvBucket() {
