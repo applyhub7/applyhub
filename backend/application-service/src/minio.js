@@ -12,9 +12,10 @@ const minioClient = new Minio.Client({
 
 export async function ensureCvBucket() {
   const bucket = applicationConfig.minio.bucket;
+  const region = applicationConfig.minio.region;
   const exists = await minioClient.bucketExists(bucket).catch(() => false);
   if (!exists) {
-    await minioClient.makeBucket(bucket);
+    await minioClient.makeBucket(bucket, region);
   }
 }
 
