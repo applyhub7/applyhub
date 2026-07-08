@@ -7,14 +7,7 @@ function requireUser(request) {
 }
 
 export async function applicationRoutes(app) {
-  app.get("/health", (req, res) => {
-  res.status(200).json({
-    status: "healthy",
-    service: "auth-service",
-    environment: process.env.NODE_ENV || "production",
-    uptime: process.uptime()
-  });
-});
+  app.get("/health", async () => ({ ok: true, service: "application", environment: applicationConfig.nodeEnv }));
 
   app.post("/applications", async (request, reply) => {
     const user = requireUser(request);
