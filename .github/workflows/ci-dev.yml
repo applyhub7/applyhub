@@ -403,3 +403,28 @@ jobs:
               echo "Successfully updated dev manifests"
             fi
           fi
+
+  export-for-promote:
+    needs: [detect-changes, build-and-push, update-manifests]
+    if: github.ref == 'refs/heads/dev-ci' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare promotion data
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          SERVICES='${{ needs.detect-changes.outputs.services }}'
+          
+          echo "Current SHA: $SHORT_SHA"
+          echo "Changed services: $SERVICES"
+          
+          echo "$SHORT_SHA" > sha.txt
+          echo "$SERVICES" > changed_services.json
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: promotion-data
+          path: |
+            sha.txt
+            changed_services.json
+          retention-days: 7
