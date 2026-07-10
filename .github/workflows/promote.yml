@@ -63,13 +63,13 @@ jobs:
           cd manifests
 
           for service in api-gateway frontend application-service job-service auth-service; do
-            FILENAME="$service-deploy.yml"
+            FILENAME="$service.yaml"
 
-            SRC_FILE="apps-manifests/$service/dev/$FILENAME"
-            DST_FILE="apps-manifests/$service/prod/$FILENAME"
+            SRC_FILE="apps-manifests/env/dev/$FILENAME"
+            DST_FILE="apps-manifests/env/prod/$FILENAME"
 
             if [ -f "$SRC_FILE" ]; then
-              CURRENT_TAG=$(yq e '.spec.template.spec.containers[0].image' "$SRC_FILE" | cut -d':' -f2)
+              CURRENT_TAG=$(yq e '.image.tag' "$SRC_FILE")
 
               # So sánh với SHA từ Application Repo
               if [[ "$CURRENT_TAG" == *"$APP_SHA"* ]]; then
@@ -82,7 +82,7 @@ jobs:
 
                 regctl image copy $IMAGE:$CURRENT_TAG $IMAGE:$NEW_TAG
 
-                yq -i e ".spec.template.spec.containers[0].image = \"$IMAGE:$NEW_TAG\"" "$DST_FILE"
+                yq -i e ".image.tag = \"$NEW_TAG\"" "$DST_FILE"
                 git add "$DST_FILE"
 
                 echo "✓ Promoted $service"
