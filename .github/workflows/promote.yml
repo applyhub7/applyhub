@@ -1,114 +1,209 @@
-name: Promote to Environment
+# name: Promote to Environment
 
-env:
-    PROJECT_NAME: applyhub
+# env:
+#     PROJECT_NAME: applyhub
+
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       source_env:
+#         description: 'Source environment'
+#         required: true
+#         type: choice
+#         options: [dev, dev-ci]
+#       target_env:
+#         description: 'Target environment'
+#         required: true
+#         type: choice
+#         options: [main, main-ci]
+#       version:
+#         description: 'Version'
+#         required: true
+
+# jobs:
+#   promote:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Application Repo
+#         uses: actions/checkout@v4
+#         with:
+#           path: app-source
+
+#       - name: Checkout GitOps Repo
+#         uses: actions/checkout@v4
+#         with:
+#           repository: applyhub7/applyhub-manifests
+#           token: ${{ secrets._GITHUB_TOKEN }}
+#           path: manifests
+
+#       - name: Install regctl
+#         run: |
+#           curl -L https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64 > /usr/local/bin/regctl
+#           chmod +x /usr/local/bin/regctl
+
+#       - name: Get Latest SHA from Application Repo
+#         id: app-sha
+#         run: |
+#           cd app-source
+#           SHORT_SHA=$(git rev-parse --short=7 HEAD)
+#           echo "APP_SHA=$SHORT_SHA" >> $GITHUB_ENV
+#           echo "Application SHA: $SHORT_SHA"
+
+#       - name: Login to DockerHub for regctl
+#         uses: docker/login-action@v3
+#         with:
+#           username: ${{ secrets.DOCKER_USER }}
+#           password: ${{ secrets.DOCKER_PASS }}
+
+#       - name: Promote Changed Services
+#         run: |
+#           VERSION="${{ inputs.version }}"
+#           NEW_TAG="v${VERSION}"
+
+#           cd manifests
+
+#           for service in api-gateway frontend application-service job-service auth-service; do
+#             FILENAME="$service.yaml"
+
+#             SRC_FILE="apps-manifests/env/dev/$FILENAME"
+#             DST_FILE="apps-manifests/env/prod/$FILENAME"
+
+#             if [ -f "$SRC_FILE" ]; then
+#               CURRENT_TAG=$(yq e '.image.tag' "$SRC_FILE")
+
+#               # So sánh với SHA từ Application Repo
+#               if [[ "$CURRENT_TAG" == *"$APP_SHA"* ]]; then
+              
+
+#                 IMAGE="${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-${service}"
+                
+
+#                 echo "→ $service changed (SHA: $APP_SHA) → Re-tagging to $NEW_TAG"
+
+#                 regctl image copy $IMAGE:$CURRENT_TAG $IMAGE:$NEW_TAG
+
+#                 yq -i e ".image.tag = \"$NEW_TAG\"" "$DST_FILE"
+#                 git add "$DST_FILE"
+
+#                 echo "✓ Promoted $service"
+
+#               else
+#                 echo "→ $service no change"
+#               fi
+#             fi
+#           done
+
+
+#           git config user.name "github-actions[bot]"
+#           git config user.email "41898282+noseyug[bot]@users.noreply.github.com"
+
+#           if git diff --staged --quiet; then
+#               echo "No actual changes in manifests"
+#             else
+#               git commit -m "promote: dev → main (v${VERSION}) [skip ci]"
+#               git pull origin main --rebase
+#               git push origin main
+
+
+#               # cd ../app-source
+
+#               # git tag -a "v${VERSION}" -m "Release v${VERSION}"
+#               # git push origin "v${VERSION}"
+
+#               echo "✅ Promotion completed successfully!"
+#             fi
+name: Promote to Production
 
 on:
   workflow_dispatch:
     inputs:
-      source_env:
-        description: 'Source environment'
-        required: true
-        type: choice
-        options: [dev, dev-ci]
-      target_env:
-        description: 'Target environment'
-        required: true
-        type: choice
-        options: [main, main-ci]
       version:
-        description: 'Version'
+        description: 'Version Production (ví dụ: 1.0.0)'
         required: true
+      description:
+        description: 'Ghi chú release'
+        required: false
+        default: 'Production Release'
 
 jobs:
   promote:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Application Repo
-        uses: actions/checkout@v4
-        with:
-          path: app-source
+    environment: production
 
-      - name: Checkout GitOps Repo
+    steps:
+      - name: Checkout Manifests Repo
         uses: actions/checkout@v4
         with:
           repository: applyhub7/applyhub-manifests
           token: ${{ secrets._GITHUB_TOKEN }}
           path: manifests
+          ref: main
 
-      - name: Install regctl
-        run: |
-          curl -L https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64 > /usr/local/bin/regctl
-          chmod +x /usr/local/bin/regctl
-
-      - name: Get Latest SHA from Application Repo
-        id: app-sha
-        run: |
-          cd app-source
-          SHORT_SHA=$(git rev-parse --short=7 HEAD)
-          echo "APP_SHA=$SHORT_SHA" >> $GITHUB_ENV
-          echo "Application SHA: $SHORT_SHA"
-
-      - name: Login to DockerHub for regctl
+      - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASS }}
 
-      - name: Promote Changed Services
+      - name: Install Tools
         run: |
-          VERSION="${{ inputs.version }}"
-          NEW_TAG="v${VERSION}"
+          curl -L https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64 -o /usr/local/bin/regctl
+          chmod +x /usr/local/bin/regctl
+          wget https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64 -O /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
 
+      - name: Promote Only Changed Services
+        env:
+          PROD_VERSION: v${{ inputs.version }}
+        run: |
           cd manifests
+          UPDATED=false
+          PROMOTED_SERVICES=""
 
-          for service in api-gateway frontend application-service job-service auth-service; do
-            FILENAME="$service.yaml"
+          echo "🚀 Promoting to Production version: $PROD_VERSION"
+          echo "Detecting changed services..."
 
-            SRC_FILE="apps-manifests/env/dev/$FILENAME"
-            DST_FILE="apps-manifests/env/prod/$FILENAME"
+          for dev_file in apps-manifests/env/dev/*.yaml; do
+            if [ ! -f "$dev_file" ]; then continue; fi
 
-            if [ -f "$SRC_FILE" ]; then
-              CURRENT_TAG=$(yq e '.image.tag' "$SRC_FILE")
+            service=$(basename "$dev_file" .yaml)
+            prod_file="apps-manifests/env/prod/${service}.yaml"
 
-              # So sánh với SHA từ Application Repo
-              if [[ "$CURRENT_TAG" == *"$APP_SHA"* ]]; then
-              
+            if [ -f "$prod_file" ]; then
+              DEV_TAG=$(yq e '.image.tag' "$dev_file")
+              PROD_TAG=$(yq e '.image.tag' "$prod_file")
 
-                IMAGE="${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-${service}"
-                
+              # Chỉ promote nếu tag ở dev khác với tag ở prod (thường là SHA mới)
+              if [ "$DEV_TAG" != "$PROD_TAG" ]; then
+                IMAGE_NAME="${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-${service}"
 
-                echo "→ $service changed (SHA: $APP_SHA) → Re-tagging to $NEW_TAG"
+                echo "→ Found changed service: $service ($DEV_TAG → $PROD_VERSION)"
 
-                regctl image copy $IMAGE:$CURRENT_TAG $IMAGE:$NEW_TAG
-
-                yq -i e ".image.tag = \"$NEW_TAG\"" "$DST_FILE"
-                git add "$DST_FILE"
-
-                echo "✓ Promoted $service"
-
+                if regctl image copy "$IMAGE_NAME:$DEV_TAG" "$IMAGE_NAME:$PROD_VERSION" --force-tag; then
+                  yq -i e ".image.tag = \"$PROD_VERSION\"" "$prod_file"
+                  git add "$prod_file"
+                  UPDATED=true
+                  PROMOTED_SERVICES="$PROMOTED_SERVICES $service"
+                  echo "✓ Promoted $service"
+                else
+                  echo "❌ Failed to promote $service"
+                fi
               else
-                echo "→ $service no change"
+                echo "→ $service: No change (same tag)"
               fi
             fi
           done
 
+          if [ "$UPDATED" = true ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+noseyug[bot]@users.noreply.github.com"
+            
+            git commit -m "release: v${{ inputs.version }} [${PROMOTED_SERVICES}]"
+            git pull origin main --rebase
+            git push origin main
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+noseyug[bot]@users.noreply.github.com"
-
-          if git diff --staged --quiet; then
-              echo "No actual changes in manifests"
-            else
-              git commit -m "promote: dev → main (v${VERSION}) [skip ci]"
-              git pull origin main --rebase
-              git push origin main
-
-
-              # cd ../app-source
-
-              # git tag -a "v${VERSION}" -m "Release v${VERSION}"
-              # git push origin "v${VERSION}"
-
-              echo "✅ Promotion completed successfully!"
-            fi
+            echo "✅ Successfully promoted to v${{ inputs.version }}"
+            echo "Promoted services:$PROMOTED_SERVICES"
+          else
+            echo "⚠️ No services changed. Nothing to promote."
+          fi
