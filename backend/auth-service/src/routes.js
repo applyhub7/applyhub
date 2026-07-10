@@ -6,7 +6,7 @@ export async function authRoutes(app) {
   res.status(200).json({
     status: "healthy",
     service: "auth-service",
-    // environment: process.env.NODE_ENV || "production",
+    environment: process.env.NODE_ENV || "production",
     uptime: process.uptime()
   });
 });
