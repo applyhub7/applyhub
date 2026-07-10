@@ -163,10 +163,10 @@
               echo "Updating manifest for $service"
               UPDATED=true
 
-              FILE="./apps-manifests/$service/dev/$service-deploy.yml"
+              FILE="./apps-manifests/env/dev/$service.yaml"
 
               if [ -f "$FILE" ]; then
-                yq -i e ".spec.template.spec.containers[0].image = \"${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-$service:$TAG\"" "$FILE"
+                yq -i e ".image.tag = \"$TAG\"" "$FILE"
                 git add "$FILE"
                 echo "   ✓ Updated $FILE"
               else
