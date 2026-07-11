@@ -226,20 +226,24 @@ jobs:
     runs-on: ubuntu-latest
     environment: production   # Nên tạo environment này để thêm approval
 
-    steps:
-      - name: Checkout Application Code (lấy SHA mới nhất)
-        uses: actions/checkout@v4
+    steps:      
+      - name: Download artifact từ run Deploy Dev
+        uses: actions/download-artifact@v4
         with:
-          repository: applyhub7/applyhub
-          ref: dev-ci
-          fetch-depth: 1
+          name: promotion-data
+          path: ./promotion-data
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+      
+      - name: Đọc sha.txt ra output
+        id: data
+        run: echo "sha=$(cat ./promotion-data/sha.txt)" >> "$GITHUB_OUTPUT"
+          
 
-      - name: Get Current Dev SHA
-        id: sha
-        run: |
-          SHORT_SHA=$(git rev-parse --short=7 HEAD)
-          echo "CURRENT_SHA=$SHORT_SHA" >> $GITHUB_ENV
-          echo "Current dev-ci SHA: $SHORT_SHA"
+      - name: Đọc changed_services.json ra output
+        id: services
+        run: echo "services=$(cat ./promotion-data/changed_services.json)" >> "$GITHUB_OUTPUT"
+          
 
       - name: Checkout Manifests Repo
         uses: actions/checkout@v4
@@ -268,16 +272,18 @@ jobs:
       - name: Promote Only Changed Services
         env:
           PROD_VERSION: v${{ inputs.version }}
-          CURRENT_SHA: ${{ env.CURRENT_SHA }}
+          CURRENT_TAG: ${{ steps.output.outputs.sha }}
         run: |
           cd manifests
           UPDATED=false
           PROMOTED_SERVICES=""
 
           echo "🚀 Starting promotion to $PROD_VERSION"
-          echo "Current dev-ci SHA: $CURRENT_SHA"
+          echo "Current dev-ci SHA: $CURRENT_TAG"
+          for service in $(echo '${{ steps.output.outputs.services }}' | jq -r '.[]' 2>/dev/null || echo ""); do
+          
+          dev_file in apps-manifests/env/dev/$service.yaml
 
-          for dev_file in apps-manifests/env/dev/*.yaml; do
             if [ ! -f "$dev_file" ]; then continue; fi
 
             service=$(basename "$dev_file" .yaml)

@@ -246,7 +246,6 @@ permissions:
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     outputs:
       services: ${{ steps.filter.outputs.changes }}
     steps:
@@ -265,7 +264,6 @@ jobs:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     strategy:
       matrix:
         service: ${{ fromJson(needs.detect-changes.outputs.services) }}
