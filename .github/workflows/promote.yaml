@@ -465,7 +465,7 @@ jobs:
 
                 echo "→ Promoting changed service: $service ($DEV_TAG → $PROD_VERSION)"
 
-                if regctl image copy "$IMAGE_NAME:$DEV_TAG" "$IMAGE_NAME:$PROD_VERSION" --force-tag; then
+                if regctl image copy "$IMAGE_NAME:$DEV_TAG" "$IMAGE_NAME:$PROD_VERSION"; then
                   yq -i e ".image.tag = \"$PROD_VERSION\"" "$prod_file"
                   git add "$prod_file"
                   UPDATED=true
