@@ -220,6 +220,10 @@ on:
         description: 'Ghi chú release (tùy chọn)'
         required: false
         default: 'Production Release'
+        
+permissions:
+  actions: read
+  contents: read
 
 jobs:
   promote:
