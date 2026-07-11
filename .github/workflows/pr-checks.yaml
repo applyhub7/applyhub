@@ -105,3 +105,26 @@ jobs:
           load: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
+  build-check-summary:
+    needs: build-check
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check matrix result
+        run: |
+            if [ "${{ needs.build-check.result }}" != "success" ]; then
+            echo "build-check failed"
+            exit 1
+            fi
+
+  docker-build-check-summary:
+    needs: docker-build-check
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check matrix result
+        run: |
+            if [ "${{ needs.docker-build-check.result }}" != "success" ]; then
+            echo "docker-build-check failed"
+            exit 1
+            fi
