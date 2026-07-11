@@ -484,7 +484,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-            git commit -m "release: v${{ inputs.version }} [${PROMOTED_SERVICES}]"
+            git commit -m "release: v${{ inputs.version }}"
             git pull origin main --rebase
             git push origin main
 
