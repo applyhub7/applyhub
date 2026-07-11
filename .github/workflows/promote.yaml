@@ -220,17 +220,33 @@ on:
         description: 'Ghi chú release (tùy chọn)'
         required: false
         default: 'Production Release'
-        
+
 permissions:
   actions: read
   contents: read
+  
+env:
+  PROJECT_NAME: applyhub
 
 jobs:
   promote:
     runs-on: ubuntu-latest
     environment: production   # Nên tạo environment này để thêm approval
 
-    steps:      
+    steps:
+      - name: Tìm run mới nhất của CI Dev
+        id: find_run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID=$(gh run list --workflow="CI Dev" --branch=dev-ci \
+            --status=success --limit=1 --json databaseId --jq '.[0].databaseId')
+          if [ -z "$RUN_ID" ]; then
+            echo "::error::Không tìm thấy run thành công nào của CI Dev trên dev-ci"
+            exit 1
+          fi
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
       - name: Download artifact từ run Deploy Dev
         uses: actions/download-artifact@v4
         with:
@@ -276,7 +292,7 @@ jobs:
       - name: Promote Only Changed Services
         env:
           PROD_VERSION: v${{ inputs.version }}
-          CURRENT_TAG: ${{ steps.output.outputs.sha }}
+          CURRENT_TAG: ${{ steps.data.outputs.sha }}
         run: |
           cd manifests
           UPDATED=false
@@ -286,7 +302,7 @@ jobs:
           echo "Current dev-ci SHA: $CURRENT_TAG"
           for service in $(echo '${{ steps.output.outputs.services }}' | jq -r '.[]' 2>/dev/null || echo ""); do
           
-          dev_file in apps-manifests/env/dev/$service.yaml
+          dev_file="apps-manifests/env/dev/$service.yaml"
 
             if [ ! -f "$dev_file" ]; then continue; fi
 
@@ -297,7 +313,7 @@ jobs:
               DEV_TAG=$(yq e '.image.tag' "$dev_file" | tr -d ' \n')
 
               # Chỉ promote service đang dùng SHA mới nhất từ dev-ci
-              if [[ "$DEV_TAG" == *"$CURRENT_SHA"* ]]; then
+              if [[ "$DEV_TAG" == *"$CURRENT_TAG"* ]]; then
                 IMAGE_NAME="${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-${service}"
 
                 echo "→ Promoting changed service: $service ($DEV_TAG → $PROD_VERSION)"
