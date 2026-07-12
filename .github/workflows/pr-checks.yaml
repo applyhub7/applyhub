@@ -102,4 +102,8 @@ jobs:
           else
             echo "✅ PASSED - all services built successfully"
             exit 0
+<<<<<<< HEAD
           fi
+=======
+          fi
+>>>>>>> 5402efc8e9f24184476766b06109e7b037d82436

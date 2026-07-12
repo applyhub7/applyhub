@@ -102,10 +102,12 @@ MINIO_BUCKET=your_bucket
 ### `backend/api-gateway/.env`
 
 ```env
+NODE_ENV=development
 GATEWAY_PORT=4000
 AUTH_URL=http://auth:4001
 JOB_URL=http://job:4002
 APPLICATION_URL=http://application:4003
+# Chỉ dùng khi NODE_ENV không phải production, ví dụ frontend local gọi gateway local.
 CORS_ORIGIN=http://localhost:5173
 ```
 
@@ -114,6 +116,14 @@ CORS_ORIGIN=http://localhost:5173
 ```env
 VITE_API_URL=http://localhost:4000
 ```
+
+Khi deploy production theo mô hình same-origin qua Ingress, frontend nên build với:
+
+```env
+VITE_API_URL=/api
+```
+
+Ingress route `/api` vào `api-gateway` và rewrite về `/`. Khi đó browser gọi cùng domain với frontend nên `api-gateway` không cần cấu hình `CORS_ORIGIN` trong production; domain production chỉ cần khai báo ở DNS/Ingress/TLS.
 
 ## Chạy Local
 
@@ -177,4 +187,4 @@ Repository hiện có GitHub Actions workflow tại `.github/workflows/ci-dev.ym
 
 - Candidate có thể nộp CV dưới dạng file `.pdf`, `.doc`, hoặc `.docx`.
 - Recruiter có thể tạo job và xem số CV của từng job.
-- Dữ liệu CV được trả về dưới dạng `resume_download_url` từ backend..
+- Dữ liệu CV được trả về dưới dạng `resume_download_url` từ backend...

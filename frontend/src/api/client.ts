@@ -16,6 +16,16 @@ async function request(path: string, options: RequestInit = {}, token?: string |
   return data;
 }
 
+async function requestBlob(path: string, token?: string | null) {
+  const res = await fetch(`${API}${path}`, {
+    headers: {
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  if (!res.ok) throw new Error("request failed");
+  return res.blob();
+}
+
 export const api = {
   request,
   register: (body: unknown) => request("/auth/register", { method: "POST", body: JSON.stringify(body) }),
@@ -27,6 +37,7 @@ export const api = {
   apply: (body: unknown, token?: string | null) => request("/applications", { method: "POST", body: JSON.stringify(body) }, token),
   myApplications: (token?: string | null) => request("/applications/me", {}, token),
   jobApplications: (jobId: string, token?: string | null) => request(`/applications/job/${jobId}`, {}, token),
+  downloadResume: (id: string, token?: string | null) => requestBlob(`/applications/${id}/resume`, token),
   updateApplication: (id: string, body: unknown, token?: string | null) =>
     request(`/applications/${id}/status`, { method: "PATCH", body: JSON.stringify(body) }, token),
 };
