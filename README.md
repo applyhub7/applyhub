@@ -187,4 +187,4 @@ Repository hiện có GitHub Actions workflow tại `.github/workflows/ci-dev.ym
 
 - Candidate có thể nộp CV dưới dạng file `.pdf`, `.doc`, hoặc `.docx`.
 - Recruiter có thể tạo job và xem số CV của từng job.
-- Dữ liệu CV được trả về dưới dạng `resume_download_url` từ backend...
+- Dữ liệu CV được trả về dưới dạng `resume_download_url` từ backend..
