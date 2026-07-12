@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ensureCvBucket, getResumeDownloadUrl, uploadResume } from "./minio.js";
+import { ensureCvBucket, getResumeObject, uploadResume } from "./minio.js";
 import {
   createApplication,
   findApplicationById,
@@ -9,6 +9,10 @@ import {
 } from "./repository.js";
 
 const allowedStatuses = ["pending", "reviewed", "rejected", "accepted"];
+
+function resumeDownloadPath(item) {
+  return item.resume_object_key ? `/applications/${item.id}/resume` : "";
+}
 
 function canTransition(from, to) {
   const rules = {
@@ -62,7 +66,7 @@ export async function listMyApplications(user) {
     items: await Promise.all(
       items.map(async (item) => ({
         ...item,
-        resume_download_url: item.resume_object_key ? await getResumeDownloadUrl(item.resume_object_key) : "",
+        resume_download_url: resumeDownloadPath(item),
       })),
     ),
   };
@@ -77,9 +81,26 @@ export async function listJobApplications(user, jobId) {
     items: await Promise.all(
       items.map(async (item) => ({
         ...item,
-        resume_download_url: item.resume_object_key ? await getResumeDownloadUrl(item.resume_object_key) : "",
+        resume_download_url: resumeDownloadPath(item),
       })),
     ),
+  };
+}
+
+export async function getApplicationResume(user, id) {
+  const application = await findApplicationById(id);
+  if (!application) return { error: { status: 404, message: "application not found" } };
+  if (application.candidate_id !== user.id && application.company_id !== user.id) {
+    return { error: { status: 403, message: "forbidden" } };
+  }
+  if (!application.resume_object_key) {
+    return { error: { status: 404, message: "resume not found" } };
+  }
+  const { stat, stream } = await getResumeObject(application.resume_object_key);
+  return {
+    fileName: application.resume_file_name || "resume",
+    contentType: stat.metaData?.["content-type"] || stat.metaData?.["Content-Type"] || "application/octet-stream",
+    stream,
   };
 }
 

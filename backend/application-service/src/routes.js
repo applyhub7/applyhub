@@ -1,4 +1,4 @@
-import { applyToJob, changeApplicationStatus, listJobApplications, listMyApplications } from "./service.js";
+import { applyToJob, changeApplicationStatus, getApplicationResume, listJobApplications, listMyApplications } from "./service.js";
 import { applicationConfig } from "./config.js";
 
 function requireUser(request) {
@@ -29,6 +29,17 @@ export async function applicationRoutes(app) {
     const result = await listJobApplications(user, request.params.jobId);
     if (result.error) return reply.code(result.error.status).send({ message: result.error.message });
     return result;
+  });
+
+  app.get("/applications/:id/resume", async (request, reply) => {
+    const user = requireUser(request);
+    if (!user) return reply.code(401).send({ message: "missing user" });
+    const result = await getApplicationResume(user, request.params.id);
+    if (result.error) return reply.code(result.error.status).send({ message: result.error.message });
+    return reply
+      .header("content-type", result.contentType)
+      .header("content-disposition", `inline; filename="${result.fileName.replaceAll('"', "")}"`)
+      .send(result.stream);
   });
 
   app.patch("/applications/:id/status", async (request, reply) => {

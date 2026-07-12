@@ -9,6 +9,7 @@ export const applicationConfig = {
     accessKey: process.env.MINIO_ACCESS_KEY || "applyhub",
     secretKey: process.env.MINIO_SECRET_KEY || "applyhub",
     bucket: process.env.MINIO_BUCKET || "applyhub-cv",
+    region: process.env.MINIO_REGION || "ap-southeast-1",
   },
   db: {
     host: process.env.APPLICATION_DB_HOST || "localhost",
@@ -16,5 +17,9 @@ export const applicationConfig = {
     database: process.env.APPLICATION_DB_NAME || "application_db",
     user: process.env.APPLICATION_DB_USER || "applyhub",
     password: process.env.APPLICATION_DB_PASSWORD || "applyhub",
+    ssl:
+      process.env.NODE_ENV === "production"
+        ? { rejectUnauthorized: false }
+        : false,
   },
 };
