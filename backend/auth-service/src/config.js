@@ -11,5 +11,9 @@ export const authConfig = {
     database: process.env.AUTH_DB_NAME || "auth_db",
     user: process.env.AUTH_DB_USER || "applyhub",
     password: process.env.AUTH_DB_PASSWORD || "applyhub",
+    ssl:
+      process.env.NODE_ENV === "production"
+        ? { rejectUnauthorized: false }
+        : false,
   },
 };
