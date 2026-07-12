@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [dev-ci]
     types: [opened, synchronize, reopened]
-    paths: ['backend/**', 'frontend/**']
+    #paths: ['backend/**', 'frontend/**']
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -86,9 +86,21 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Check matrix result
+      - name: Report result
         run: |
-            if [ "${{ needs.build-check.result }}" != "success" ]; then
-            echo "build-check failed"
+          result="${{ needs.build-check.result }}"
+          echo "build-check result: $result"
+
+          if [ "$result" == "failure" ]; then
+            echo "❌ FAILED - one or more services failed to build"
             exit 1
-            fi
+          elif [ "$result" == "cancelled" ]; then
+            echo "⚠️ CANCELLED"
+            exit 1
+          elif [ "$result" == "skipped" ]; then
+            echo "⏭️ SKIPPED - no relevant service changes, treated as PASS"
+            exit 0
+          else
+            echo "✅ PASSED - all services built successfully"
+            exit 0
+          fi
