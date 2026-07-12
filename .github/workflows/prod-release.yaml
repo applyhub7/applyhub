@@ -32,8 +32,8 @@ jobs:
     # - release được publish nhưng KHÔNG phải từ branch main
     # - workflow_dispatch được chạy tay nhưng KHÔNG phải trên branch main
     if: |
-      (github.event_name == 'release' && github.event.release.target_commitish == 'main') ||
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+      (github.event_name == 'release' && github.event.release.target_commitish == 'main-ci') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main-ci')
     runs-on: ubuntu-latest
     environment: production
     outputs:
