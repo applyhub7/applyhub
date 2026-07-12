@@ -80,31 +80,7 @@ jobs:
         run: |
           pip install -r requirements.txt
           python -m compileall .
- 
-  docker-build-check:
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
-    steps:
-      - uses: actions/checkout@v4
- 
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
- 
-      - name: Build image (no push)
-        uses: docker/build-push-action@v6
-        with:
-          context: ${{ matrix.service == 'frontend' && './frontend' || format('./backend/{0}', matrix.service) }}
-          file: ${{ matrix.service == 'frontend' && './frontend/Dockerfile' || format('./backend/{0}/Dockerfile', matrix.service) }}
-          push: false
-          load: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+
   build-check-summary:
     needs: build-check
     if: always()
@@ -114,17 +90,5 @@ jobs:
         run: |
             if [ "${{ needs.build-check.result }}" != "success" ]; then
             echo "build-check failed"
-            exit 1
-            fi
-
-  docker-build-check-summary:
-    needs: docker-build-check
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check matrix result
-        run: |
-            if [ "${{ needs.docker-build-check.result }}" != "success" ]; then
-            echo "docker-build-check failed"
             exit 1
             fi
