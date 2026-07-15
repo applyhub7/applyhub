@@ -17,94 +17,84 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      services: ${{ steps.filter.outputs.changes }}
-    steps:
-     - uses: actions/checkout@v4
-     - uses: dorny/paths-filter@v3
-       id: filter
-       with:
-         filters: |
-           application-service: 'backend/application-service/**'
-           auth-service: 'backend/auth-service/**'
-           job-service: 'backend/job-service/**'
-           api-gateway: 'backend/api-gateway/**'
-           frontend: 'frontend/**'
-
-  build-check:
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != '' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      api-gateway: ${{ steps.filter.outputs.api-gateway }}
+      auth-service: ${{ steps.filter.outputs.auth-service }}
+      application-service: ${{ steps.filter.outputs.application-service }}
+      job-service: ${{ steps.filter.outputs.job-service }}
     steps:
       - uses: actions/checkout@v4
- 
-      - name: Setup Node.js 20
-        if: |
-          matrix.service == 'frontend' ||
-          matrix.service == 'api-gateway' ||
-          matrix.service == 'auth-service' ||
-          matrix.service == 'application-service'
-        uses: actions/setup-node@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
         with:
-          node-version: 20
-          #cache: 'npm'
-          cache-dependency-path: ${{ matrix.service == 'frontend' && './frontend/package-lock.json' || format('./backend/{0}/package-lock.json', matrix.service) }}
- 
-      - name: Frontend - install & build
-        if: matrix.service == 'frontend'
-        working-directory: ./frontend
-        run: |
-          npm ci
-          npm run build
- 
-      - name: Backend Node - install
-        if: contains(fromJson('["api-gateway","auth-service","application-service"]'), matrix.service)
-        working-directory: ./backend/${{ matrix.service }}
-        run: |
-          npm ci
-          npm run lint
-          npm run format:check
-          npm run test
-        
- 
-      - name: Setup Python
-        if: matrix.service == 'job-service'
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.11
-          cache: 'pip'
- 
-      - name: Backend Python - install & compile check
-        if: matrix.service == 'job-service'
-        working-directory: ./backend/job-service
-        run: |
-          pip install -r requirements.txt
-          python -m compileall .
+          filters: |
+            frontend:
+              - 'frontend/**'
+            api-gateway:
+              - 'backend/api-gateway/**'
+            auth-service:
+              - 'backend/auth-service/**'
+            application-service:
+              - 'backend/application-service/**'
+            job-service:
+              - 'backend/job-service/**'
+
+  frontend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
+    uses: ./.github/workflows/check-node-app.yaml
+    with:
+      working-directory: frontend
+      run-build: true
+
+  api-gateway:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.api-gateway == 'true'
+    uses: ./.github/workflows/check-node-app.yaml
+    with:
+      working-directory: backend/api-gateway
+
+  auth-service:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.auth-service == 'true'
+    uses: ./.github/workflows/check-node-app.yaml
+    with:
+      working-directory: backend/auth-service
+
+  application-service:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.application-service == 'true'
+    uses: ./.github/workflows/check-node-app.yaml
+    with:
+      working-directory: backend/application-service
+
+  job-service:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.job-service == 'true'
+    uses: ./.github/workflows/check-python-service.yaml
+    with:
+      working-directory: backend/job-service
+      python-version: "3.11"
 
   pr-checks-gate:
-    needs: build-check
+    needs:
+      - frontend
+      - api-gateway
+      - auth-service
+      - application-service
+      - job-service
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Report result
         run: |
-          result="${{ needs.build-check.result }}"
-          echo "build-check result: $result"
+          results='${{ toJson(needs) }}'
+          echo "$results"
 
-          if [ "$result" == "failure" ]; then
-            echo "❌ FAILED - one or more services failed to build"
+          if echo "$results" | jq -e '.[] | select(.result == "failure" or .result == "cancelled")' >/dev/null; then
+            echo "FAILED - one or more services failed checks"
             exit 1
-          elif [ "$result" == "cancelled" ]; then
-            echo "⚠️ CANCELLED"
-            exit 1
-          elif [ "$result" == "skipped" ]; then
-            echo "⏭️ SKIPPED - no relevant service changes, treated as PASS"
-            exit 0
-          else
-            echo "✅ PASSED - all services built successfully"
-            exit 0
           fi
+
+          echo "PASSED - all required service checks completed successfully"

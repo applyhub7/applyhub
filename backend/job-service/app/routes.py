@@ -26,12 +26,21 @@ def job_detail(job_id: str):
 
 
 @router.post("/jobs", status_code=201)
-def create_job_route(payload: JobCreate, x_user_id: str | None = Header(default=None), x_user_role: str | None = Header(default=None)):
+def create_job_route(
+    payload: JobCreate,
+    x_user_id: str | None = Header(default=None),
+    x_user_role: str | None = Header(default=None),
+):
     if not x_user_id or not x_user_role:
         raise HTTPException(status_code=401, detail="missing auth headers")
     if x_user_role != "recruiter":
         raise HTTPException(status_code=403, detail="forbidden")
-    if not payload.title.strip() or not payload.companyId.strip() or not payload.location.strip() or not payload.description.strip():
+    if (
+        not payload.title.strip()
+        or not payload.companyId.strip()
+        or not payload.location.strip()
+        or not payload.description.strip()
+    ):
         raise HTTPException(status_code=422, detail="invalid payload")
     return {"job": create_job(payload.model_dump())}
 

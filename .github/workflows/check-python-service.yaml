@@ -1,0 +1,47 @@
+name: Check Python Service
+
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        required: true
+        type: string
+      python-version:
+        required: false
+        type: string
+        default: "3.11"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: pip
+          cache-dependency-path: |
+            ${{ inputs.working-directory }}/requirements.txt
+            ${{ inputs.working-directory }}/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: python -m ruff check --no-cache .
+
+      - name: Format check
+        run: python -m ruff format --check .
+
+      - name: Test
+        run: python -m pytest
