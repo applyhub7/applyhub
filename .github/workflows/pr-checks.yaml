@@ -42,7 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
  
-      - name: Setup Node.js 22
+      - name: Setup Node.js 24
         if: |
           matrix.service == 'frontend' ||
           matrix.service == 'api-gateway' ||
@@ -50,7 +50,7 @@ jobs:
           matrix.service == 'application-service'
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: 'npm'
           cache-dependency-path: ${{ matrix.service == 'frontend' && './frontend/package-lock.json' || format('./backend/{0}/package-lock.json', matrix.service) }}
  
