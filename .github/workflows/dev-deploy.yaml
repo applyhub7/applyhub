@@ -134,7 +134,7 @@ jobs:
             if git diff --staged --quiet; then
               echo "No actual changes"
             else
-              git commit -m "ci: update dev images to ${TAG}"
+              git commit -m "deploy(dev): update image tags to ${TAG}"
               git push origin main
               echo "Successfully updated dev manifests"
             fi
