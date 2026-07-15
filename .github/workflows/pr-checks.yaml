@@ -51,7 +51,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          #cache: 'npm'
           cache-dependency-path: ${{ matrix.service == 'frontend' && './frontend/package-lock.json' || format('./backend/{0}/package-lock.json', matrix.service) }}
  
       - name: Frontend - install & build
