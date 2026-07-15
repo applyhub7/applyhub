@@ -20,9 +20,6 @@ export function AuthForm({ form, setForm, onRegister, onLogin, mode, setMode, er
       ? form.name.trim().length > 1 && form.email.trim().length > 4 && form.password.trim().length >= 8
       : form.email.trim().length > 4 && form.password.trim().length > 0;
 
-  const passwordStrength =
-    form.password.length >= 12 ? "Strong" : form.password.length >= 8 ? "Good" : form.password.length >= 1 ? "Weak" : "";
-
   return (
     <section className="auth-card">
       <div className="card-title">

@@ -1,0 +1,141 @@
+name: Dev Deploy
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PROJECT_NAME: applyhub
+  YQ_VERSION: v4.44.3
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.filter.outputs.changes }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      api-gateway: ${{ steps.filter.outputs.api-gateway }}
+      auth-service: ${{ steps.filter.outputs.auth-service }}
+      application-service: ${{ steps.filter.outputs.application-service }}
+      job-service: ${{ steps.filter.outputs.job-service }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+            api-gateway:
+              - 'backend/api-gateway/**'
+            auth-service:
+              - 'backend/auth-service/**'
+            application-service:
+              - 'backend/application-service/**'
+            job-service:
+              - 'backend/job-service/**'
+
+  prepare-image-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Generate Docker image tag
+        id: tag
+        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+  build-and-push:
+    needs:
+      - detect-changes
+      - prepare-image-tag
+    if: needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service == 'frontend' && './frontend/' || format('./backend/{0}/', matrix.service) }}
+          file: ${{ matrix.service == 'frontend' && './frontend/Dockerfile' || format('./backend/{0}/Dockerfile', matrix.service) }}
+          push: true
+          tags: ${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-${{ matrix.service }}:${{ needs.prepare-image-tag.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  update-manifests:
+    needs:
+      - detect-changes
+      - prepare-image-tag
+      - build-and-push
+    if: needs.detect-changes.outputs.services != '[]' && needs.detect-changes.outputs.services != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout manifests repo
+        uses: actions/checkout@v4
+        with:
+          repository: applyhub7/applyhub-manifests
+          token: ${{ secrets._GITHUB_TOKEN }}
+          path: manifests
+          ref: main
+
+      - name: Install yq
+        run: |
+          wget "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" -O /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+
+      - name: Update dev manifests
+        run: |
+          cd manifests
+          TAG="${{ needs.prepare-image-tag.outputs.tag }}"
+          UPDATED=false
+
+          for service in $(echo '${{ needs.detect-changes.outputs.services }}' | jq -r '.[]' 2>/dev/null || echo ""); do
+            if [ -z "$service" ]; then continue; fi
+
+            FILE="./apps-manifests/env/dev/$service.yaml"
+            if [ -f "$FILE" ]; then
+              yq -i e ".image.tag = \"$TAG\"" "$FILE"
+              git add "$FILE"
+              UPDATED=true
+              echo "Updated dev manifest for $service with tag $TAG"
+            fi
+          done
+
+          if [ "$UPDATED" = true ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            if git diff --staged --quiet; then
+              echo "No actual changes"
+            else
+              git commit -m "ci: update dev images to ${TAG}"
+              git push origin main
+              echo "Successfully updated dev manifests"
+            fi
+          fi

@@ -1,4 +1,4 @@
-import { applicationPool } from "./db.js";
+import { applicationPool } from './db.js';
 
 export async function createApplication(record) {
   const result = await applicationPool.query(
@@ -18,36 +18,36 @@ export async function createApplication(record) {
       record.resumeFileName,
       record.resumeObjectKey,
       record.status,
-    ],
+    ]
   );
   return result.rows[0];
 }
 
 export async function findApplicationsByCandidate(candidateId) {
   const result = await applicationPool.query(
-    "SELECT * FROM applications WHERE candidate_id = $1 ORDER BY created_at DESC",
-    [candidateId],
+    'SELECT * FROM applications WHERE candidate_id = $1 ORDER BY created_at DESC',
+    [candidateId]
   );
   return result.rows;
 }
 
 export async function findApplicationsByJob(jobId) {
   const result = await applicationPool.query(
-    "SELECT * FROM applications WHERE job_id = $1 ORDER BY created_at DESC",
-    [jobId],
+    'SELECT * FROM applications WHERE job_id = $1 ORDER BY created_at DESC',
+    [jobId]
   );
   return result.rows;
 }
 
 export async function findApplicationById(id) {
-  const result = await applicationPool.query("SELECT * FROM applications WHERE id = $1", [id]);
+  const result = await applicationPool.query('SELECT * FROM applications WHERE id = $1', [id]);
   return result.rows[0] || null;
 }
 
 export async function updateApplicationStatus(id, status) {
   const result = await applicationPool.query(
-    "UPDATE applications SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *",
-    [status, id],
+    'UPDATE applications SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+    [status, id]
   );
   return result.rows[0] || null;
 }
