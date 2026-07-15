@@ -29,9 +29,7 @@ export async function applicationRoutes(app) {
     const result = await applyToJob(user, request.body || {});
 
     if (result.error) {
-      return reply
-        .code(result.error.status)
-        .send({ message: result.error.message });
+      return reply.code(result.error.status).send({ message: result.error.message });
     }
 
     return reply.code(201).send(result.application);
@@ -57,9 +55,7 @@ export async function applicationRoutes(app) {
     const result = await listJobApplications(user, request.params.jobId);
 
     if (result.error) {
-      return reply
-        .code(result.error.status)
-        .send({ message: result.error.message });
+      return reply.code(result.error.status).send({ message: result.error.message });
     }
 
     return result;
@@ -75,17 +71,12 @@ export async function applicationRoutes(app) {
     const result = await getApplicationResume(user, request.params.id);
 
     if (result.error) {
-      return reply
-        .code(result.error.status)
-        .send({ message: result.error.message });
+      return reply.code(result.error.status).send({ message: result.error.message });
     }
 
     return reply
       .header('content-type', result.contentType)
-      .header(
-        'content-disposition',
-        `inline; filename="${result.fileName.replaceAll('"', '')}"`
-      )
+      .header('content-disposition', `inline; filename="${result.fileName.replaceAll('"', '')}"`)
       .send(result.stream);
   });
 
@@ -96,16 +87,10 @@ export async function applicationRoutes(app) {
       return reply.code(401).send({ message: 'missing user' });
     }
 
-    const result = await changeApplicationStatus(
-      user,
-      request.params.id,
-      request.body?.status
-    );
+    const result = await changeApplicationStatus(user, request.params.id, request.body?.status);
 
     if (result.error) {
-      return reply
-        .code(result.error.status)
-        .send({ message: result.error.message });
+      return reply.code(result.error.status).send({ message: result.error.message });
     }
 
     return result.application;

@@ -96,11 +96,7 @@ export async function listMyApplications(user) {
 export async function listJobApplications(user, jobId) {
   const items = await findApplicationsByJob(jobId);
 
-  if (
-    items.length > 0 &&
-    items[0].company_id !== user.id &&
-    user.role !== 'candidate'
-  ) {
+  if (items.length > 0 && items[0].company_id !== user.id && user.role !== 'candidate') {
     return { error: { status: 403, message: 'forbidden' } };
   }
 
@@ -119,10 +115,7 @@ export async function getApplicationResume(user, id) {
     return { error: { status: 404, message: 'application not found' } };
   }
 
-  if (
-    application.candidate_id !== user.id &&
-    application.company_id !== user.id
-  ) {
+  if (application.candidate_id !== user.id && application.company_id !== user.id) {
     return { error: { status: 403, message: 'forbidden' } };
   }
 
@@ -130,9 +123,7 @@ export async function getApplicationResume(user, id) {
     return { error: { status: 404, message: 'resume not found' } };
   }
 
-  const { stat, stream } = await getResumeObject(
-    application.resume_object_key
-  );
+  const { stat, stream } = await getResumeObject(application.resume_object_key);
 
   return {
     fileName: application.resume_file_name || 'resume',
@@ -163,10 +154,7 @@ export async function changeApplicationStatus(user, id, status) {
     return { error: { status: 403, message: 'forbidden' } };
   }
 
-  if (
-    !canTransition(application.status, status) &&
-    application.status !== status
-  ) {
+  if (!canTransition(application.status, status) && application.status !== status) {
     return { error: { status: 400, message: 'invalid transition' } };
   }
 

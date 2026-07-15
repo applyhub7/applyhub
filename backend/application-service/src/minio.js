@@ -42,11 +42,10 @@ export async function uploadResume({ candidateId, jobId, fileName, dataUrl }) {
 
   const bucket = applicationConfig.minio.bucket;
 
-  const objectKey =
-    `resumes/${candidateId}/${jobId}/${Date.now()}-${fileName}`.replace(
-      /\s+/g,
-      '-'
-    );
+  const objectKey = `resumes/${candidateId}/${jobId}/${Date.now()}-${fileName}`.replace(
+    /\s+/g,
+    '-'
+  );
 
   await minioClient.putObject(bucket, objectKey, buffer, buffer.length, {
     'Content-Type': contentType,

@@ -19,9 +19,6 @@ export const applicationConfig = {
     database: process.env.APPLICATION_DB_NAME || 'application_db',
     user: process.env.APPLICATION_DB_USER || 'applyhub',
     password: process.env.APPLICATION_DB_PASSWORD || 'applyhub',
-    ssl:
-      process.env.NODE_ENV === 'production'
-        ? { rejectUnauthorized: false }
-        : false,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   },
 };
