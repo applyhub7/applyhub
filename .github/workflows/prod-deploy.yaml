@@ -9,7 +9,7 @@ on:
         type: string
 
 concurrency:
-  group: prod-deploy
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -101,15 +101,15 @@ jobs:
 
             CURRENT_TAG=""
             if [ -f "$MANIFEST" ]; then
-              CURRENT_TAG="$(yq -r '.release.sourceTag // .image.tag // ""' "$MANIFEST")"
+              CURRENT_TAG="$(yq -r '.image.tag // ""' "$MANIFEST")"
             fi
 
             if [ -z "$CURRENT_TAG" ]; then
               CHANGED=true
-              echo "$service has no current prod source tag; marking as changed"
+              echo "$service has no current prod image tag; marking as changed"
             elif ! git rev-parse "$CURRENT_TAG" >/dev/null 2>&1; then
               CHANGED=true
-              echo "$service current prod tag '$CURRENT_TAG' is not in this repo; marking as changed"
+              echo "$service current prod image tag '$CURRENT_TAG' is not a Git ref in this repo; marking as changed"
             elif git diff --quiet "$CURRENT_TAG" "$NEW_TAG" -- "$SERVICE_PATH"; then
               CHANGED=false
               echo "$service unchanged from $CURRENT_TAG to $NEW_TAG"
@@ -159,7 +159,6 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-${{ matrix.service }}:${{ needs.prepare.outputs.tag }}
-            ${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-${{ matrix.service }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -197,7 +196,6 @@ jobs:
             FILE="./apps-manifests/env/prod/$service.yaml"
             if [ -f "$FILE" ]; then
               yq -i e ".image.tag = \"$TAG\"" "$FILE"
-              yq -i e ".release.sourceTag = \"$TAG\"" "$FILE"
               git add "$FILE"
               echo "Updated prod manifest for $service with tag $TAG"
             fi
@@ -208,7 +206,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No actual changes"
           else
-            git commit -m "ci: release prod images to ${TAG}"
+            git commit -m "deploy(prod): update image tags to ${TAG}"
             git push origin main
             echo "Successfully updated prod manifests"
           fi
