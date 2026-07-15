@@ -7,28 +7,30 @@ const minioClient = new Minio.Client({
   useSSL: applicationConfig.minio.useSSL,
   accessKey: applicationConfig.minio.accessKey,
   secretKey: applicationConfig.minio.secretKey,
-<<<<<<< Updated upstream
-=======
   region: applicationConfig.minio.region,
->>>>>>> Stashed changes
 });
 
 export async function ensureCvBucket() {
   const bucket = applicationConfig.minio.bucket;
+  const region = applicationConfig.minio.region;
+
   const exists = await minioClient.bucketExists(bucket).catch(() => false);
+
   if (!exists) {
-    await minioClient.makeBucket(bucket);
+    await minioClient.makeBucket(bucket, region);
   }
 }
 
 function parseDataUrl(dataUrl) {
   const match = String(dataUrl).match(/^data:([^;]+);base64,(.+)$/);
+
   if (!match) {
     return {
       buffer: Buffer.from(String(dataUrl), 'base64'),
       contentType: 'application/octet-stream',
     };
   }
+
   return {
     contentType: match[1],
     buffer: Buffer.from(match[2], 'base64'),
@@ -37,11 +39,14 @@ function parseDataUrl(dataUrl) {
 
 export async function uploadResume({ candidateId, jobId, fileName, dataUrl }) {
   const { buffer, contentType } = parseDataUrl(dataUrl);
+
   const bucket = applicationConfig.minio.bucket;
-  const objectKey = `resumes/${candidateId}/${jobId}/${Date.now()}-${fileName}`.replace(
-    /\s+/g,
-    '-'
-  );
+
+  const objectKey =
+    `resumes/${candidateId}/${jobId}/${Date.now()}-${fileName}`.replace(
+      /\s+/g,
+      '-'
+    );
 
   await minioClient.putObject(bucket, objectKey, buffer, buffer.length, {
     'Content-Type': contentType,
@@ -66,4 +71,15 @@ export async function getResumeDownloadUrl(objectKey) {
       }
     );
   });
+}
+
+export async function getResumeObject(objectKey) {
+  const bucket = applicationConfig.minio.bucket;
+
+  const [stat, stream] = await Promise.all([
+    minioClient.statObject(bucket, objectKey),
+    minioClient.getObject(bucket, objectKey),
+  ]);
+
+  return { stat, stream };
 }

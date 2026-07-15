@@ -8,7 +8,8 @@ RUN npm ci --omit=dev
 
 COPY src ./src
 
-EXPOSE 4003
+EXPOSE 4001
 
 CMD ["npm", "start"]
-#####test-relea
+
+#
