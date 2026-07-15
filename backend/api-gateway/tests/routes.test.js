@@ -1,9 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import { buildApp } from './app.js';
 
-vi.mock('./proxy.js', () => ({
-  forward: vi.fn((request, reply) => reply.send({ mocked: true })),
+// Mock trước khi import app
+vi.mock('../src/proxy.js', () => ({
+  forward: vi.fn(async (request, reply) => {
+    return reply.code(200).send({ mocked: true });
+  }),
 }));
+
+import { buildApp } from '../src/app.js';
 
 describe('Route forwarding', () => {
   it('GET /jobs được forward đến job service', async () => {
@@ -16,6 +20,8 @@ describe('Route forwarding', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ mocked: true });
+
+    await app.close();
   });
 
   it('GET /auth không có CORS check khi không phải production', async () => {
@@ -27,5 +33,8 @@ describe('Route forwarding', () => {
     });
 
     expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ mocked: true });
+
+    await app.close();
   });
 });

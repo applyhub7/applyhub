@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildApp } from './app.js';
+import { buildApp } from '../src/app.js';
 
 describe('GET /health', () => {
   it('trả về status ok và tên service', async () => {
@@ -11,8 +11,12 @@ describe('GET /health', () => {
     });
 
     expect(response.statusCode).toBe(200);
-    const body = response.json();
-    expect(body.ok).toBe(true);
-    expect(body.service).toBe('gateway');
+
+    expect(response.json()).toMatchObject({
+      ok: true,
+      service: 'gateway',
+    });
+
+    await app.close();
   });
 });
