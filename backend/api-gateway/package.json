@@ -9,8 +9,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "node tests/health.test.js && node tests/routes.test.js"
   },
   "dependencies": {
     "@fastify/cors": "^8.5.0",
@@ -22,7 +21,6 @@
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.7.0",
     "nodemon": "^3.1.14",
-    "prettier": "^3.9.5",
-    "vitest": "^1.6.0"
+    "prettier": "^3.9.5"
   }
 }

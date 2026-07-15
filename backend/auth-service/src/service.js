@@ -21,7 +21,8 @@ export function signRefreshToken(user) {
 }
 
 export function sanitizeUser(user) {
-  const { password_hash, ...safe } = user;
+  const safe = { ...user };
+  delete safe.password_hash;
   return safe;
 }
 

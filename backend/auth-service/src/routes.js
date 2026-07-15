@@ -1,5 +1,4 @@
 import { loginUser, logoutUser, refreshAccessToken, registerUser, verifyAccessToken } from "./service.js";
-import { authConfig } from "./config.js";
 
 export async function authRoutes(app) {
   app.get("/health", (req, res) => {
