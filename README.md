@@ -1,190 +1,126 @@
 # ApplyHub
 
-[![CI](https://github.com/noseyug/applyhub/actions/workflows/ci-dev.yml/badge.svg?branch=dev-ci)](https://github.com/noseyug/applyhub/actions/workflows/ci-dev.yml)
-[![React](https://img.shields.io/badge/React-19.0.0-61DAFB?logo=react&logoColor=white)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
-[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Fastify](https://img.shields.io/badge/Fastify-5.x-000000?logo=fastify&logoColor=white)](https://fastify.dev/)
-[![Express](https://img.shields.io/badge/Express-4.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%2B-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![MinIO](https://img.shields.io/badge/MinIO-Latest-C72E49?logo=minio&logoColor=white)](https://min.io/)
+ApplyHub is a microservices-based job application platform built as a personal
+DevOps/CI-CD portfolio project.
 
-ApplyHub là một nền tảng tuyển dụng gồm frontend React/Vite và 4 backend service tách rời để:
+This repository contains the application source code, Dockerfiles and GitHub
+Actions workflows. Kubernetes deployment manifests are managed separately in
+[applyhub7/applyhub-manifests](https://github.com/applyhub7/applyhub-manifests).
 
-- Đăng ký, đăng nhập và phân quyền `candidate` / `recruiter`
-- Candidate xem danh sách job, xem chi tiết và nộp CV
-- Recruiter tạo job và xem danh sách ứng viên đã nộp
-- API Gateway điều phối request giữa các service
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-Job%20Service-009688?logo=fastapi&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Multi--service-2496ED?logo=docker&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF?logo=githubactions&logoColor=white)
 
-## Kiến Trúc
+## Overview
 
-- `frontend`: giao diện người dùng với React, TypeScript, Vite
-- `backend/auth-service`: xác thực, đăng ký, đăng nhập, refresh token và verify JWT
-- `backend/job-service`: quản lý job posting bằng FastAPI
-- `backend/application-service`: quản lý đơn ứng tuyển, lưu CV lên MinIO và trả URL tải CV
-- `backend/api-gateway`: reverse proxy cho frontend gọi vào một điểm duy nhất
+ApplyHub simulates a recruitment platform with a frontend, an API gateway and
+multiple backend services. The system is structured as a monorepo so each
+service can keep its own runtime, dependencies, tests and Docker image.
 
-## Công Nghệ
+Main capabilities visible in the source code:
 
-- React 19
-- TypeScript
-- Vite
-- Node.js cho `auth-service`, `api-gateway` và `application-service`
-- Python cho `job-service`
-- Fastify
-- Express
-- FastAPI
-- PostgreSQL
-- MinIO
+- User authentication flow: register, login, logout, refresh token and verify token.
+- Job listing and recruiter-managed job CRUD.
+- Job application workflow, including application status and resume retrieval.
+- API Gateway routing for `/auth`, `/jobs` and `/applications`.
 
-## Yêu Cầu
+## Services
 
-- Node.js 18+ cho `auth-service`, `api-gateway`, `application-service` và `frontend`
-- Python 3.11+ cho `job-service`
-- PostgreSQL cho `auth-service`, `job-service`, `application-service`
-- MinIO cho lưu CV của ứng viên
+| Service | Runtime | Port | Responsibility |
+| --- | --- | --- | --- |
+| `frontend` | React, Vite, TypeScript | 80 in Docker | Web UI for ApplyHub |
+| `backend/api-gateway` | Node.js, Fastify | 4000 | Routes client API requests to backend services |
+| `backend/auth-service` | Node.js, Express | 4001 | Authentication and token handling |
+| `backend/job-service` | Python, FastAPI | 4002 | Job listing and job management |
+| `backend/application-service` | Node.js, Fastify | 4003 | Job applications and resume/object storage integration |
 
-## Cấu Hình Môi Trường
+## Architecture
 
-Mỗi service có file mẫu `.env.example`. Hãy copy sang `.env` tương ứng trước khi chạy.
+```mermaid
+flowchart LR
+    User[User] --> Frontend[Frontend]
+    Frontend --> Gateway[API Gateway]
 
-### `backend/auth-service/.env`
+    Gateway --> Auth[Auth Service]
+    Gateway --> Job[Job Service]
+    Gateway --> Application[Application Service]
 
-```env
-AUTH_PORT=4001
-AUTH_DB_HOST=localhost
-AUTH_DB_PORT=5432
-AUTH_DB_NAME=your_database
-AUTH_DB_USER=your_user
-AUTH_DB_PASSWORD=your_password
-JWT_SECRET=change-me
+    Auth --> Database[(PostgreSQL)]
+    Job --> Database
+    Application --> Database
+    Application --> Storage[(MinIO / Amazon S3)]
 ```
 
-### `backend/job-service/.env`
+## Tech Stack
 
-```env
-JOB_PORT=4002
-JOB_DB_HOST=localhost
-JOB_DB_PORT=5432
-JOB_DB_NAME=job_db
-JOB_DB_USER=applyhub
-JOB_DB_PASSWORD=applyhub
+| Area | Technologies |
+| --- | --- |
+| Frontend | React 19, Vite 6, TypeScript |
+| Backend | Node.js, Express, Fastify, Python 3.11, FastAPI |
+| Data | PostgreSQL, MinIO-compatible object storage |
+| Quality | ESLint, Prettier, Ruff, Pytest, Node test scripts |
+| Container | Docker, Nginx for frontend static serving |
+| CI/CD | GitHub Actions, Docker Buildx, Docker Hub, `yq` manifest updates |
+
+## Repository Structure
+
+```text
+frontend/
+backend/
+  api-gateway/
+  auth-service/
+  application-service/
+  job-service/
+.github/
+  workflows/
 ```
 
-### `backend/job-service` chạy bằng Python
+Each deployable service has its own `Dockerfile`. Node.js services define their
+commands in `package.json`; the Python job service uses `requirements.txt`,
+`requirements-dev.txt` and `pyproject.toml`.
 
-```bash
-cd backend/job-service
-pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 4002
+## CI/CD
+
+This repository includes five GitHub Actions workflows:
+
+| Workflow | Purpose |
+| --- | --- |
+| `.github/workflows/pr-checks.yaml` | Detects changed services and runs the required checks for pull requests to `dev` and `main` |
+| `.github/workflows/check-node-app.yaml` | Reusable workflow for Node.js services: install, lint, format check, test and optional build |
+| `.github/workflows/check-python-service.yaml` | Reusable workflow for the Python service: install dependencies, Ruff checks and Pytest |
+| `.github/workflows/dev-deploy.yaml` | Builds changed service images on push to `dev`, pushes them to Docker Hub and updates dev manifests |
+| `.github/workflows/prod-deploy.yaml` | Manually deploys a release tag, builds changed images and updates prod manifests |
+
+Deployment follows a GitOps flow:
+
+```mermaid
+flowchart TD
+    PR[Pull request] --> Checks[Lint, format and test]
+    Checks --> Merge[Merge to dev]
+    Merge --> Build[Build changed service images]
+    Build --> DockerHub[Push images to Docker Hub]
+    Build --> Update[Update environment image tags]
+    Update --> Manifests[applyhub-manifests]
+    Manifests --> ArgoCD[Argo CD]
+    ArgoCD --> Kubernetes[Kubernetes environment]
 ```
 
-### `backend/application-service/.env`
+Development images are tagged with short Git commit SHAs. Production deployment
+uses an explicit release tag provided to `prod-deploy.yaml`.
 
-```env
-APPLICATION_PORT=4003
-APPLICATION_DB_HOST=localhost
-APPLICATION_DB_PORT=5435
-APPLICATION_DB_NAME=your_database
-APPLICATION_DB_USER=your_user
-APPLICATION_DB_PASSWORD=your_password
-MINIO_ENDPOINT=localhost
-MINIO_PORT=9000
-MINIO_USE_SSL=false
-MINIO_ACCESS_KEY=your_access_key
-MINIO_SECRET_KEY=your_secret_key
-MINIO_BUCKET=your_bucket
-```
+## Notable Implementation Details
 
-### `backend/api-gateway/.env`
+- `frontend/Dockerfile` uses a multi-stage build: Node builds the Vite app, then Nginx serves the static files.
+- `backend/api-gateway/src/routes.js` centralizes routing to auth, job and application services.
+- `backend/auth-service/src/routes.js` exposes the authentication endpoints.
+- `backend/job-service/app/routes.py` defines health, job listing, job detail and recruiter-protected job mutation routes.
+- `backend/application-service/src/routes.js` handles application actions and resume retrieval.
+- CI uses path filtering so a frontend-only change does not need to run every backend service check.
 
-```env
-NODE_ENV=development
-GATEWAY_PORT=4000
-AUTH_URL=http://auth:4001
-JOB_URL=http://job:4002
-APPLICATION_URL=http://application:4003
-# Chỉ dùng khi NODE_ENV không phải production, ví dụ frontend local gọi gateway local.
-CORS_ORIGIN=http://localhost:5173
-```
+## Related Repository
 
-### `frontend/.env`
-
-```env
-VITE_API_URL=http://localhost:4000
-```
-
-Khi deploy production theo mô hình same-origin qua Ingress, frontend nên build với:
-
-```env
-VITE_API_URL=/api
-```
-
-Ingress route `/api` vào `api-gateway` và rewrite về `/`. Khi đó browser gọi cùng domain với frontend nên `api-gateway` không cần cấu hình `CORS_ORIGIN` trong production; domain production chỉ cần khai báo ở DNS/Ingress/TLS.
-
-## Chạy Local
-
-### 1. Cài dependencies
-
-```bash
-cd frontend
-npm install
-
-cd ../backend/auth-service
-npm install
-
-cd ../backend/application-service
-npm install
-
-cd ../api-gateway
-npm install
-```
-
-### 2. Chạy các service backend
-
-Mở 4 terminal riêng và chạy:
-
-```bash
-cd backend/auth-service
-npm run dev
-```
-
-```bash
-cd backend/application-service
-npm run dev
-```
-
-```bash
-cd backend/api-gateway
-npm run dev
-```
-
-### 3. Chạy frontend
-
-```bash
-cd frontend
-npm run dev
-```
-
-Mặc định frontend sẽ chạy ở `http://localhost:5173`.
-
-## Scripts
-
-- `frontend`: `npm run dev`, `npm run build`
-- `backend/auth-service`: `npm run dev`, `npm start`
-- `backend/job-service`: `pip install -r requirements.txt`, `python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 4002`
-- `backend/application-service`: `npm run dev`, `npm start`
-- `backend/api-gateway`: `npm run dev`, `npm start`
-
-## CI
-
-Repository hiện có GitHub Actions workflow tại `.github/workflows/ci-dev.yml` để build Docker image cho `backend/application-service` khi có pull request vào nhánh `dev-ci`.
-
-## Ghi Chú
-
-- Candidate có thể nộp CV dưới dạng file `.pdf`, `.doc`, hoặc `.docx`.
-- Recruiter có thể tạo job và xem số CV của từng job.
-- Dữ liệu CV được trả về dưới dạng `resume_download_url` từ backend....
+- Kubernetes manifests: [applyhub7/applyhub-manifests](https://github.com/applyhub7/applyhub-manifests)
