@@ -1,190 +1,223 @@
-# ApplyHub
+# ApplyHub Source Pipeline
 
-[![CI](https://github.com/noseyug/applyhub/actions/workflows/ci-dev.yml/badge.svg?branch=dev-ci)](https://github.com/noseyug/applyhub/actions/workflows/ci-dev.yml)
-[![React](https://img.shields.io/badge/React-19.0.0-61DAFB?logo=react&logoColor=white)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-6.x-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
-[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Fastify](https://img.shields.io/badge/Fastify-5.x-000000?logo=fastify&logoColor=white)](https://fastify.dev/)
-[![Express](https://img.shields.io/badge/Express-4.x-000000?logo=express&logoColor=white)](https://expressjs.com/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%2B-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![MinIO](https://img.shields.io/badge/MinIO-Latest-C72E49?logo=minio&logoColor=white)](https://min.io/)
+Application source repository used by the ApplyHub DevOps/CI/CD project. The
+focus of this repo is not the application domain itself, but the delivery
+pipeline around a multi-service codebase: change detection, reusable checks,
+Docker image builds, registry publishing and GitOps manifest updates.
 
-ApplyHub là một nền tảng tuyển dụng gồm frontend React/Vite và 4 backend service tách rời để:
+## 📚 Table Of Contents
 
-- Đăng ký, đăng nhập và phân quyền `candidate` / `recruiter`
-- Candidate xem danh sách job, xem chi tiết và nộp CV
-- Recruiter tạo job và xem danh sách ứng viên đã nộp
-- API Gateway điều phối request giữa các service
+- [✨ Highlights](#highlights)
+- [🏗️ Application Architecture](#application-architecture)
+- [🧩 Service Context](#service-context)
+- [📁 Repository Structure](#repository-structure)
+- [🚀 CI/CD Flow](#cicd-flow)
+- [⚙️ GitHub Actions Workflows](#github-actions-workflows)
+- [🏷️ Image Tagging Strategy](#image-tagging-strategy)
+- [🔄 GitOps Handoff](#gitops-handoff)
+- [🧪 Quality Gates](#quality-gates)
+- [🐳 Docker Build Scope](#docker-build-scope)
+- [⚙️ Runtime Configuration](#runtime-configuration)
+- [🔗 Related Repositories](#related-repositories)
 
-## Kiến Trúc
+## ✨ Highlights
 
-- `frontend`: giao diện người dùng với React, TypeScript, Vite
-- `backend/auth-service`: xác thực, đăng ký, đăng nhập, refresh token và verify JWT
-- `backend/job-service`: quản lý job posting bằng FastAPI
-- `backend/application-service`: quản lý đơn ứng tuyển, lưu CV lên MinIO và trả URL tải CV
-- `backend/api-gateway`: reverse proxy cho frontend gọi vào một điểm duy nhất
+- Changed-service detection for targeted PR checks.
+- Reusable GitHub Actions workflows for Node.js and Python services.
+- Per-service lint, format and test gates.
+- Docker Buildx image builds for changed services.
+- Docker Hub publishing from CI.
+- Development deployments tagged with short commit SHAs.
+- Production deployments tagged with explicit release versions.
+- Automated updates to the separate GitOps manifests repository.
 
-## Công Nghệ
+## 🏗️ Application Architecture
 
-- React 19
-- TypeScript
-- Vite
-- Node.js cho `auth-service`, `api-gateway` và `application-service`
-- Python cho `job-service`
-- Fastify
-- Express
-- FastAPI
-- PostgreSQL
-- MinIO
+The application is a small multi-service workload used to demonstrate the
+pipeline across different runtimes and deployment units.
 
-## Yêu Cầu
-
-- Node.js 18+ cho `auth-service`, `api-gateway`, `application-service` và `frontend`
-- Python 3.11+ cho `job-service`
-- PostgreSQL cho `auth-service`, `job-service`, `application-service`
-- MinIO cho lưu CV của ứng viên
-
-## Cấu Hình Môi Trường
-
-Mỗi service có file mẫu `.env.example`. Hãy copy sang `.env` tương ứng trước khi chạy.
-
-### `backend/auth-service/.env`
-
-```env
-AUTH_PORT=4001
-AUTH_DB_HOST=localhost
-AUTH_DB_PORT=5432
-AUTH_DB_NAME=your_database
-AUTH_DB_USER=your_user
-AUTH_DB_PASSWORD=your_password
-JWT_SECRET=change-me
+```mermaid
+flowchart LR
+    User[User] --> Frontend[React Frontend]
+    Frontend --> Gateway[API Gateway]
+    Gateway --> Auth[Auth Service]
+    Gateway --> Job[Job Service]
+    Gateway --> Application[Application Service]
+    Auth --> DB[(PostgreSQL)]
+    Job --> DB
+    Application --> DB
+    Application --> Storage[(MinIO / S3)]
 ```
 
-### `backend/job-service/.env`
+| Service | Runtime | Port | Role |
+| --- | --- | --- | --- |
+| `frontend` | React, Vite, TypeScript | 80 in Docker | Web UI |
+| `api-gateway` | Node.js, Fastify | 4000 | Routes client requests |
+| `auth-service` | Node.js, Express | 4001 | Authentication and token handling |
+| `job-service` | Python, FastAPI | 4002 | Job listing and job management |
+| `application-service` | Node.js, Fastify | 4003 | Applications and resume/object storage |
 
-```env
-JOB_PORT=4002
-JOB_DB_HOST=localhost
-JOB_DB_PORT=5432
-JOB_DB_NAME=job_db
-JOB_DB_USER=applyhub
-JOB_DB_PASSWORD=applyhub
+The frontend calls the API Gateway. The gateway forwards `/auth`, `/jobs` and
+`/applications` traffic to the matching backend service.
+
+## 🧩 Service Context
+
+Main gateway routes:
+
+| Route group | Target service |
+| --- | --- |
+| `/auth/*` | `auth-service` |
+| `/jobs/*` | `job-service` |
+| `/applications/*` | `application-service` |
+
+Main app capabilities:
+
+- User registration and login.
+- Job browsing and recruiter job management.
+- Candidate application submission.
+- Resume upload and retrieval.
+
+## 📁 Repository Structure
+
+```text
+frontend/                   # React/Vite frontend used for image build
+backend/
+  api-gateway/              # Node.js Fastify gateway
+  auth-service/             # Node.js Express service
+  job-service/              # Python FastAPI service
+  application-service/      # Node.js Fastify service
+.github/workflows/          # CI/CD workflows
 ```
 
-### `backend/job-service` chạy bằng Python
+Each service keeps its own dependencies, scripts, tests and Dockerfile.
+
+## 🚀 CI/CD Flow
+
+```text
+Pull request
+  -> Detect changed services
+  -> Run service-specific checks
+  -> Merge to dev
+  -> Build changed Docker images
+  -> Push images to Docker Hub
+  -> Update dev image tags in applyhub-manifests
+  -> Argo CD deploys the new images
+```
+
+Production uses a manual release workflow:
+
+```text
+Release tag input
+  -> Resolve changed services for the release
+  -> Build release Docker images
+  -> Push immutable version tags
+  -> Update prod values in applyhub-manifests
+  -> Argo CD syncs production
+```
+
+## ⚙️ GitHub Actions Workflows
+
+| Workflow | Purpose |
+| --- | --- |
+| `pr-checks.yaml` | Detects changed services and runs only the required checks |
+| `check-node-app.yaml` | Reusable Node.js workflow for install, lint, format check, test and optional build |
+| `check-python-service.yaml` | Reusable Python workflow for dependency install, Ruff and Pytest |
+| `dev-deploy.yaml` | Builds changed images on `dev`, pushes to Docker Hub and updates dev manifests |
+| `prod-deploy.yaml` | Builds release images and updates prod manifests with a release tag |
+
+This keeps validation and deployment scoped to the services affected by a
+change instead of rebuilding the entire monorepo every time.
+
+## 🏷️ Image Tagging Strategy
+
+| Environment | Tag format | Purpose |
+| --- | --- | --- |
+| Development | Short Git commit SHA | Trace each dev deployment back to a source revision |
+| Production | Release tag, such as `v0.0.6` | Immutable release deployment and rollback |
+
+Images are published per service:
+
+```text
+noseyug/applyhub-frontend
+noseyug/applyhub-api-gateway
+noseyug/applyhub-auth-service
+noseyug/applyhub-job-service
+noseyug/applyhub-application-service
+```
+
+## 🔄 GitOps Handoff
+
+This repository builds and publishes Docker images. Kubernetes deployment is
+handled by the manifests repository.
+
+The deployment workflows update files under:
+
+```text
+apps-manifests/env/dev/<service>.yaml
+apps-manifests/env/prod/<service>.yaml
+```
+
+Argo CD then detects the manifests commit and syncs the target Kubernetes
+environment.
+
+## 🧪 Quality Gates
+
+Node.js services use:
 
 ```bash
-cd backend/job-service
-pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 4002
+npm run lint
+npm run format:check
+npm run test
 ```
 
-### `backend/application-service/.env`
-
-```env
-APPLICATION_PORT=4003
-APPLICATION_DB_HOST=localhost
-APPLICATION_DB_PORT=5435
-APPLICATION_DB_NAME=your_database
-APPLICATION_DB_USER=your_user
-APPLICATION_DB_PASSWORD=your_password
-MINIO_ENDPOINT=localhost
-MINIO_PORT=9000
-MINIO_USE_SSL=false
-MINIO_ACCESS_KEY=your_access_key
-MINIO_SECRET_KEY=your_secret_key
-MINIO_BUCKET=your_bucket
-```
-
-### `backend/api-gateway/.env`
-
-```env
-NODE_ENV=development
-GATEWAY_PORT=4000
-AUTH_URL=http://auth:4001
-JOB_URL=http://job:4002
-APPLICATION_URL=http://application:4003
-# Chỉ dùng khi NODE_ENV không phải production, ví dụ frontend local gọi gateway local.
-CORS_ORIGIN=http://localhost:5173
-```
-
-### `frontend/.env`
-
-```env
-VITE_API_URL=http://localhost:4000
-```
-
-Khi deploy production theo mô hình same-origin qua Ingress, frontend nên build với:
-
-```env
-VITE_API_URL=/api
-```
-
-Ingress route `/api` vào `api-gateway` và rewrite về `/`. Khi đó browser gọi cùng domain với frontend nên `api-gateway` không cần cấu hình `CORS_ORIGIN` trong production; domain production chỉ cần khai báo ở DNS/Ingress/TLS.
-
-## Chạy Local
-
-### 1. Cài dependencies
+The frontend also runs:
 
 ```bash
-cd frontend
-npm install
-
-cd ../backend/auth-service
-npm install
-
-cd ../backend/application-service
-npm install
-
-cd ../api-gateway
-npm install
+npm run build
 ```
 
-### 2. Chạy các service backend
-
-Mở 4 terminal riêng và chạy:
+The Python service uses:
 
 ```bash
-cd backend/auth-service
-npm run dev
+python -m ruff format --check .
+python -m ruff check .
+python -m pytest
 ```
 
-```bash
-cd backend/application-service
-npm run dev
-```
+## 🐳 Docker Build Scope
 
-```bash
-cd backend/api-gateway
-npm run dev
-```
+Each deployable service owns a Dockerfile, so CI can build images independently:
 
-### 3. Chạy frontend
+| Service | Dockerfile |
+| --- | --- |
+| `frontend` | `frontend/Dockerfile` |
+| `api-gateway` | `backend/api-gateway/Dockerfile` |
+| `auth-service` | `backend/auth-service/Dockerfile` |
+| `job-service` | `backend/job-service/Dockerfile` |
+| `application-service` | `backend/application-service/Dockerfile` |
 
-```bash
-cd frontend
-npm run dev
-```
+The frontend uses a multi-stage build: Node builds the Vite app and Nginx
+serves the static output.
 
-Mặc định frontend sẽ chạy ở `http://localhost:5173`.
+## ⚙️ Runtime Configuration
 
-## Scripts
+Runtime defaults are defined in each service's config module for local
+development. Deployment-time values and secrets are managed in the manifests
+repository.
 
-- `frontend`: `npm run dev`, `npm run build`
-- `backend/auth-service`: `npm run dev`, `npm start`
-- `backend/job-service`: `pip install -r requirements.txt`, `python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 4002`
-- `backend/application-service`: `npm run dev`, `npm start`
-- `backend/api-gateway`: `npm run dev`, `npm start`
+Key variables:
 
-## CI
+| Service | Variables |
+| --- | --- |
+| Frontend | `VITE_API_URL` |
+| API Gateway | `GATEWAY_PORT`, `AUTH_URL`, `JOB_URL`, `APPLICATION_URL` |
+| Auth Service | `AUTH_PORT`, `AUTH_DB_*`, `JWT_SECRET` |
+| Job Service | `JOB_PORT`, `JOB_DB_*` |
+| Application Service | `APPLICATION_PORT`, `APPLICATION_DB_*`, `MINIO_*` |
 
-Repository hiện có GitHub Actions workflow tại `.github/workflows/ci-dev.yml` để build Docker image cho `backend/application-service` khi có pull request vào nhánh `dev-ci`.
+## 🔗 Related Repositories
 
-## Ghi Chú
-
-- Candidate có thể nộp CV dưới dạng file `.pdf`, `.doc`, hoặc `.docx`.
-- Recruiter có thể tạo job và xem số CV của từng job.
-- Dữ liệu CV được trả về dưới dạng `resume_download_url` từ backend....
+| Repository | Purpose |
+| --- | --- |
+| `https://github.com/applyhub7/applyhub` | Source code, Dockerfiles and CI/CD workflows |
+| `https://github.com/applyhub7/applyhub-manifests` | Helm chart, environment values and Argo CD application definitions |
