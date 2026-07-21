@@ -1,126 +1,223 @@
 # ApplyHub
 
-ApplyHub is a microservices-based job application platform built as a personal
-DevOps/CI-CD portfolio project.
+Application source repository used by the ApplyHub DevOps/CI/CD project. The
+focus of this repo is not the application domain itself, but the delivery
+pipeline around a multi-service codebase: change detection, reusable checks,
+Docker image builds, registry publishing and GitOps manifest updates.
 
-This repository contains the application source code, Dockerfiles and GitHub
-Actions workflows. Kubernetes deployment manifests are managed separately in
-[applyhub7/applyhub-manifests](https://github.com/applyhub7/applyhub-manifests).
+## 📚 Table Of Contents
 
-![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-Job%20Service-009688?logo=fastapi&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-Multi--service-2496ED?logo=docker&logoColor=white)
-![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF?logo=githubactions&logoColor=white)
+- [✨ Highlights](#highlights)
+- [🏗️ Application Architecture](#application-architecture)
+- [🧩 Service Context](#service-context)
+- [📁 Repository Structure](#repository-structure)
+- [🚀 CI/CD Flow](#cicd-flow)
+- [⚙️ GitHub Actions Workflows](#github-actions-workflows)
+- [🏷️ Image Tagging Strategy](#image-tagging-strategy)
+- [🔄 GitOps Handoff](#gitops-handoff)
+- [🧪 Quality Gates](#quality-gates)
+- [🐳 Docker Build Scope](#docker-build-scope)
+- [⚙️ Runtime Configuration](#runtime-configuration)
+- [🔗 Related Repositories](#related-repositories)
 
-## Overview
+## ✨ Highlights
 
-ApplyHub simulates a recruitment platform with a frontend, an API gateway and
-multiple backend services. The system is structured as a monorepo so each
-service can keep its own runtime, dependencies, tests and Docker image.
+- Changed-service detection for targeted PR checks.
+- Reusable GitHub Actions workflows for Node.js and Python services.
+- Per-service lint, format and test gates.
+- Docker Buildx image builds for changed services.
+- Docker Hub publishing from CI.
+- Development deployments tagged with short commit SHAs.
+- Production deployments tagged with explicit release versions.
+- Automated updates to the separate GitOps manifests repository.
 
-Main capabilities visible in the source code:
+## 🏗️ Application Architecture
 
-- User authentication flow: register, login, logout, refresh token and verify token.
-- Job listing and recruiter-managed job CRUD.
-- Job application workflow, including application status and resume retrieval.
-- API Gateway routing for `/auth`, `/jobs` and `/applications`.
-
-## Services
-
-| Service | Runtime | Port | Responsibility |
-| --- | --- | --- | --- |
-| `frontend` | React, Vite, TypeScript | 80 in Docker | Web UI for ApplyHub |
-| `backend/api-gateway` | Node.js, Fastify | 4000 | Routes client API requests to backend services |
-| `backend/auth-service` | Node.js, Express | 4001 | Authentication and token handling |
-| `backend/job-service` | Python, FastAPI | 4002 | Job listing and job management |
-| `backend/application-service` | Node.js, Fastify | 4003 | Job applications and resume/object storage integration |
-
-## Architecture
+The application is a small multi-service workload used to demonstrate the
+pipeline across different runtimes and deployment units.
 
 ```mermaid
 flowchart LR
-    User[User] --> Frontend[Frontend]
+    User[User] --> Frontend[React Frontend]
     Frontend --> Gateway[API Gateway]
-
     Gateway --> Auth[Auth Service]
     Gateway --> Job[Job Service]
     Gateway --> Application[Application Service]
-
-    Auth --> Database[(PostgreSQL)]
-    Job --> Database
-    Application --> Database
-    Application --> Storage[(MinIO / Amazon S3)]
+    Auth --> DB[(PostgreSQL)]
+    Job --> DB
+    Application --> DB
+    Application --> Storage[(MinIO / S3)]
 ```
 
-## Tech Stack
+| Service | Runtime | Port | Role |
+| --- | --- | --- | --- |
+| `frontend` | React, Vite, TypeScript | 80 in Docker | Web UI |
+| `api-gateway` | Node.js, Fastify | 4000 | Routes client requests |
+| `auth-service` | Node.js, Express | 4001 | Authentication and token handling |
+| `job-service` | Python, FastAPI | 4002 | Job listing and job management |
+| `application-service` | Node.js, Fastify | 4003 | Applications and resume/object storage |
 
-| Area | Technologies |
+The frontend calls the API Gateway. The gateway forwards `/auth`, `/jobs` and
+`/applications` traffic to the matching backend service.
+
+## 🧩 Service Context
+
+Main gateway routes:
+
+| Route group | Target service |
 | --- | --- |
-| Frontend | React 19, Vite 6, TypeScript |
-| Backend | Node.js, Express, Fastify, Python 3.11, FastAPI |
-| Data | PostgreSQL, MinIO-compatible object storage |
-| Quality | ESLint, Prettier, Ruff, Pytest, Node test scripts |
-| Container | Docker, Nginx for frontend static serving |
-| CI/CD | GitHub Actions, Docker Buildx, Docker Hub, `yq` manifest updates |
+| `/auth/*` | `auth-service` |
+| `/jobs/*` | `job-service` |
+| `/applications/*` | `application-service` |
 
-## Repository Structure
+Main app capabilities:
+
+- User registration and login.
+- Job browsing and recruiter job management.
+- Candidate application submission.
+- Resume upload and retrieval.
+
+## 📁 Repository Structure
 
 ```text
-frontend/
+frontend/                   # React/Vite frontend used for image build
 backend/
-  api-gateway/
-  auth-service/
-  application-service/
-  job-service/
-.github/
-  workflows/
+  api-gateway/              # Node.js Fastify gateway
+  auth-service/             # Node.js Express service
+  job-service/              # Python FastAPI service
+  application-service/      # Node.js Fastify service
+.github/workflows/          # CI/CD workflows
 ```
 
-Each deployable service has its own `Dockerfile`. Node.js services define their
-commands in `package.json`; the Python job service uses `requirements.txt`,
-`requirements-dev.txt` and `pyproject.toml`.
+Each service keeps its own dependencies, scripts, tests and Dockerfile.
 
-## CI/CD
+## 🚀 CI/CD Flow
 
-This repository includes five GitHub Actions workflows:
+```text
+Pull request
+  -> Detect changed services
+  -> Run service-specific checks
+  -> Merge to dev
+  -> Build changed Docker images
+  -> Push images to Docker Hub
+  -> Update dev image tags in applyhub-manifests
+  -> Argo CD deploys the new images
+```
+
+Production uses a manual release workflow:
+
+```text
+Release tag input
+  -> Resolve changed services for the release
+  -> Build release Docker images
+  -> Push immutable version tags
+  -> Update prod values in applyhub-manifests
+  -> Argo CD syncs production
+```
+
+## ⚙️ GitHub Actions Workflows
 
 | Workflow | Purpose |
 | --- | --- |
-| `.github/workflows/pr-checks.yaml` | Detects changed services and runs the required checks for pull requests to `dev` and `main` |
-| `.github/workflows/check-node-app.yaml` | Reusable workflow for Node.js services: install, lint, format check, test and optional build |
-| `.github/workflows/check-python-service.yaml` | Reusable workflow for the Python service: install dependencies, Ruff checks and Pytest |
-| `.github/workflows/dev-deploy.yaml` | Builds changed service images on push to `dev`, pushes them to Docker Hub and updates dev manifests |
-| `.github/workflows/prod-deploy.yaml` | Manually deploys a release tag, builds changed images and updates prod manifests |
+| `pr-checks.yaml` | Detects changed services and runs only the required checks |
+| `check-node-app.yaml` | Reusable Node.js workflow for install, lint, format check, test and optional build |
+| `check-python-service.yaml` | Reusable Python workflow for dependency install, Ruff and Pytest |
+| `dev-deploy.yaml` | Builds changed images on `dev`, pushes to Docker Hub and updates dev manifests |
+| `prod-deploy.yaml` | Builds release images and updates prod manifests with a release tag |
 
-Deployment follows a GitOps flow:
+This keeps validation and deployment scoped to the services affected by a
+change instead of rebuilding the entire monorepo every time.
 
-```mermaid
-flowchart TD
-    PR[Pull request] --> Checks[Lint, format and test]
-    Checks --> Merge[Merge to dev]
-    Merge --> Build[Build changed service images]
-    Build --> DockerHub[Push images to Docker Hub]
-    Build --> Update[Update environment image tags]
-    Update --> Manifests[applyhub-manifests]
-    Manifests --> ArgoCD[Argo CD]
-    ArgoCD --> Kubernetes[Kubernetes environment]
+## 🏷️ Image Tagging Strategy
+
+| Environment | Tag format | Purpose |
+| --- | --- | --- |
+| Development | Short Git commit SHA | Trace each dev deployment back to a source revision |
+| Production | Release tag, such as `v0.0.6` | Immutable release deployment and rollback |
+
+Images are published per service:
+
+```text
+noseyug/applyhub-frontend
+noseyug/applyhub-api-gateway
+noseyug/applyhub-auth-service
+noseyug/applyhub-job-service
+noseyug/applyhub-application-service
 ```
 
-Development images are tagged with short Git commit SHAs. Production deployment
-uses an explicit release tag provided to `prod-deploy.yaml`.
+## 🔄 GitOps Handoff
 
-## Notable Implementation Details
+This repository builds and publishes Docker images. Kubernetes deployment is
+handled by the manifests repository.
 
-- `frontend/Dockerfile` uses a multi-stage build: Node builds the Vite app, then Nginx serves the static files.
-- `backend/api-gateway/src/routes.js` centralizes routing to auth, job and application services.
-- `backend/auth-service/src/routes.js` exposes the authentication endpoints.
-- `backend/job-service/app/routes.py` defines health, job listing, job detail and recruiter-protected job mutation routes.
-- `backend/application-service/src/routes.js` handles application actions and resume retrieval.
-- CI uses path filtering so a frontend-only change does not need to run every backend service check.
+The deployment workflows update files under:
 
-## Related Repository
+```text
+apps-manifests/env/dev/<service>.yaml
+apps-manifests/env/prod/<service>.yaml
+```
 
-- Kubernetes manifests: [applyhub7/applyhub-manifests](https://github.com/applyhub7/applyhub-manifests)
+Argo CD then detects the manifests commit and syncs the target Kubernetes
+environment.
+
+## 🧪 Quality Gates
+
+Node.js services use:
+
+```bash
+npm run lint
+npm run format:check
+npm run test
+```
+
+The frontend also runs:
+
+```bash
+npm run build
+```
+
+The Python service uses:
+
+```bash
+python -m ruff format --check .
+python -m ruff check .
+python -m pytest
+```
+
+## 🐳 Docker Build Scope
+
+Each deployable service owns a Dockerfile, so CI can build images independently:
+
+| Service | Dockerfile |
+| --- | --- |
+| `frontend` | `frontend/Dockerfile` |
+| `api-gateway` | `backend/api-gateway/Dockerfile` |
+| `auth-service` | `backend/auth-service/Dockerfile` |
+| `job-service` | `backend/job-service/Dockerfile` |
+| `application-service` | `backend/application-service/Dockerfile` |
+
+The frontend uses a multi-stage build: Node builds the Vite app and Nginx
+serves the static output.
+
+## ⚙️ Runtime Configuration
+
+Runtime defaults are defined in each service's config module for local
+development. Deployment-time values and secrets are managed in the manifests
+repository.
+
+Key variables:
+
+| Service | Variables |
+| --- | --- |
+| Frontend | `VITE_API_URL` |
+| API Gateway | `GATEWAY_PORT`, `AUTH_URL`, `JOB_URL`, `APPLICATION_URL` |
+| Auth Service | `AUTH_PORT`, `AUTH_DB_*`, `JWT_SECRET` |
+| Job Service | `JOB_PORT`, `JOB_DB_*` |
+| Application Service | `APPLICATION_PORT`, `APPLICATION_DB_*`, `MINIO_*` |
+
+## 🔗 Related Repositories
+
+| Repository | Purpose |
+| ---- | ---- |
+| `https://github.com/applyhub7/applyhub` | Source code, Dockerfiles and CI/CD workflows |
+| `https://github.com/applyhub7/applyhub-manifests` | Helm chart, environment values and Argo CD application definitions |
