@@ -1,4 +1,4 @@
-# ApplyHub Source Pipeline
+# ApplyHub
 
 Application source repository used by the ApplyHub DevOps/CI/CD project. The
 focus of this repo is not the application domain itself, but the delivery
@@ -218,6 +218,6 @@ Key variables:
 ## 🔗 Related Repositories
 
 | Repository | Purpose |
-| --- | --- |
+| ---- | ---- |
 | `https://github.com/applyhub7/applyhub` | Source code, Dockerfiles and CI/CD workflows |
 | `https://github.com/applyhub7/applyhub-manifests` | Helm chart, environment values and Argo CD application definitions |
