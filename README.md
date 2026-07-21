@@ -1,9 +1,8 @@
 # ApplyHub
 
-Application source repository used by the ApplyHub DevOps/CI/CD project. The
-focus of this repo is not the application domain itself, but the delivery
-pipeline around a multi-service codebase: change detection, reusable checks,
-Docker image builds, registry publishing and GitOps manifest updates.
+Application source repository for ApplyHub. It contains the microservice code,
+Dockerfiles and GitHub Actions workflows used to test, build and publish images
+for GitOps deployment.
 
 ## 📚 Table Of Contents
 
@@ -20,6 +19,8 @@ Docker image builds, registry publishing and GitOps manifest updates.
 - [⚙️ Runtime Configuration](#runtime-configuration)
 - [🔗 Related Repositories](#related-repositories)
 
+<a id="highlights"></a>
+
 ## ✨ Highlights
 
 - Changed-service detection for targeted PR checks.
@@ -30,6 +31,8 @@ Docker image builds, registry publishing and GitOps manifest updates.
 - Development deployments tagged with short commit SHAs.
 - Production deployments tagged with explicit release versions.
 - Automated updates to the separate GitOps manifests repository.
+
+<a id="application-architecture"></a>
 
 ## 🏗️ Application Architecture
 
@@ -60,6 +63,8 @@ flowchart LR
 The frontend calls the API Gateway. The gateway forwards `/auth`, `/jobs` and
 `/applications` traffic to the matching backend service.
 
+<a id="service-context"></a>
+
 ## 🧩 Service Context
 
 Main gateway routes:
@@ -77,6 +82,8 @@ Main app capabilities:
 - Candidate application submission.
 - Resume upload and retrieval.
 
+<a id="repository-structure"></a>
+
 ## 📁 Repository Structure
 
 ```text
@@ -91,29 +98,38 @@ backend/
 
 Each service keeps its own dependencies, scripts, tests and Dockerfile.
 
+<a id="cicd-flow"></a>
+
 ## 🚀 CI/CD Flow
 
-```text
-Pull request
-  -> Detect changed services
-  -> Run service-specific checks
-  -> Merge to dev
-  -> Build changed Docker images
-  -> Push images to Docker Hub
-  -> Update dev image tags in applyhub-manifests
-  -> Argo CD deploys the new images
+Development deployment:
+
+```mermaid
+flowchart TD
+    DevPR[Pull request to dev] --> DevDetect[Detect changed services]
+    DevDetect --> DevChecks[Lint, format and test]
+    DevChecks --> DevMerge[Merge to dev]
+    DevMerge --> DevBuild[Build changed service images]
+    DevBuild --> DevPush[Push SHA-tagged images to Docker Hub]
+    DevPush --> DevUpdate[Update dev values in applyhub-manifests]
+    DevUpdate --> DevArgo[Argo CD syncs dev]
 ```
 
-Production uses a manual release workflow:
+Production deployment:
 
-```text
-Release tag input
-  -> Resolve changed services for the release
-  -> Build release Docker images
-  -> Push immutable version tags
-  -> Update prod values in applyhub-manifests
-  -> Argo CD syncs production
+```mermaid
+flowchart TD
+    ProdPR[Pull request to main] --> ProdDetect[Detect changed services]
+    ProdDetect --> ProdChecks[Lint, format and test]
+    ProdChecks --> ProdMerge[Merge to main]
+    ProdMerge --> ProdRelease[Manual release tag input]
+    ProdRelease --> ProdBuild[Build release images]
+    ProdBuild --> ProdPush[Push versioned images to Docker Hub]
+    ProdPush --> ProdUpdate[Update prod values in applyhub-manifests]
+    ProdUpdate --> ProdArgo[Argo CD syncs prod]
 ```
+
+<a id="github-actions-workflows"></a>
 
 ## ⚙️ GitHub Actions Workflows
 
@@ -127,6 +143,8 @@ Release tag input
 
 This keeps validation and deployment scoped to the services affected by a
 change instead of rebuilding the entire monorepo every time.
+
+<a id="image-tagging-strategy"></a>
 
 ## 🏷️ Image Tagging Strategy
 
@@ -145,6 +163,8 @@ noseyug/applyhub-job-service
 noseyug/applyhub-application-service
 ```
 
+<a id="gitops-handoff"></a>
+
 ## 🔄 GitOps Handoff
 
 This repository builds and publishes Docker images. Kubernetes deployment is
@@ -159,6 +179,8 @@ apps-manifests/env/prod/<service>.yaml
 
 Argo CD then detects the manifests commit and syncs the target Kubernetes
 environment.
+
+<a id="quality-gates"></a>
 
 ## 🧪 Quality Gates
 
@@ -184,6 +206,8 @@ python -m ruff check .
 python -m pytest
 ```
 
+<a id="docker-build-scope"></a>
+
 ## 🐳 Docker Build Scope
 
 Each deployable service owns a Dockerfile, so CI can build images independently:
@@ -198,6 +222,8 @@ Each deployable service owns a Dockerfile, so CI can build images independently:
 
 The frontend uses a multi-stage build: Node builds the Vite app and Nginx
 serves the static output.
+
+<a id="runtime-configuration"></a>
 
 ## ⚙️ Runtime Configuration
 
@@ -215,9 +241,9 @@ Key variables:
 | Job Service | `JOB_PORT`, `JOB_DB_*` |
 | Application Service | `APPLICATION_PORT`, `APPLICATION_DB_*`, `MINIO_*` |
 
+<a id="related-repositories"></a>
+
 ## 🔗 Related Repositories
 
-| Repository | Purpose |
-| ---- | ---- |
-| `https://github.com/applyhub7/applyhub` | Source code, Dockerfiles and CI/CD workflows |
-| `https://github.com/applyhub7/applyhub-manifests` | Helm chart, environment values and Argo CD application definitions |
+[applyhub7/applyhub-manifests](https://github.com/applyhub7/applyhub-manifests)
+contains the Helm chart, environment values and Argo CD application definitions.
