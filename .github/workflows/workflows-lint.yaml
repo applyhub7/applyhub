@@ -3,7 +3,8 @@ name: Workflows Lint
 on:
   pull_request:
     branches: [dev, main]
-    paths: ".github/workflows/**"
+    paths:
+      - ".github/workflows/**"
 
 permissions:
   contents: read
@@ -15,5 +16,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Lint
-        uses: raven-actions/actionslint@v2
+
+      - name: actionlint
+        uses: devops-actions/actionlint@v0.1.12
