@@ -2,11 +2,11 @@ name: Workflows Lint
 
 on:
   pull_request:
-    branchs: [dev, main]
+    branches: [dev, main]
     paths: ".github/workflows/**"
 
 permissions:
-  context: read
+  contents: read
 
 jobs:
   workflows-lint:
