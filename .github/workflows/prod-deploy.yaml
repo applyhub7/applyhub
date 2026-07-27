@@ -95,7 +95,7 @@ jobs:
                 SERVICE_PATH="frontend"
                 ;;
               *)
-                SERVICE_PATH="backend/$service"
+                SERVICE_PATH="apps/$service"
                 ;;
             esac
 
@@ -154,8 +154,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.service == 'frontend' && './frontend/' || format('./backend/{0}/', matrix.service) }}
-          file: ${{ matrix.service == 'frontend' && './frontend/Dockerfile' || format('./backend/{0}/Dockerfile', matrix.service) }}
+          context: ${{ matrix.service == 'frontend' && './frontend/' || format('./apps/{0}/', matrix.service) }}
+          file: ${{ matrix.service == 'frontend' && './frontend/Dockerfile' || format('./apps/{0}/Dockerfile', matrix.service) }}
           push: true
           tags: |
             ${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-${{ matrix.service }}:${{ needs.prepare.outputs.tag }}

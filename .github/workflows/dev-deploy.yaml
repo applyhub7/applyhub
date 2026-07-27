@@ -4,8 +4,7 @@ on:
   push:
     branches: [dev]
     paths:
-      - 'backend/**'
-      - 'frontend/**'
+      - "apps/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -36,15 +35,15 @@ jobs:
         with:
           filters: |
             frontend:
-              - 'frontend/**'
+              - 'apps/frontend/**'
             api-gateway:
-              - 'backend/api-gateway/**'
+              - 'apps/api-gateway/**'
             auth-service:
-              - 'backend/auth-service/**'
+              - 'apps/auth-service/**'
             application-service:
-              - 'backend/application-service/**'
+              - 'apps/application-service/**'
             job-service:
-              - 'backend/job-service/**'
+              - 'apps/job-service/**'
 
   prepare-image-tag:
     runs-on: ubuntu-latest
@@ -81,8 +80,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.service == 'frontend' && './frontend/' || format('./backend/{0}/', matrix.service) }}
-          file: ${{ matrix.service == 'frontend' && './frontend/Dockerfile' || format('./backend/{0}/Dockerfile', matrix.service) }}
+          context: "./${{ matrix.service }}/"
+          file: "./${{ matrix.service }}/Dockerfile"
           push: true
           tags: ${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-${{ matrix.service }}:${{ needs.prepare-image-tag.outputs.tag }}
           cache-from: type=gha
