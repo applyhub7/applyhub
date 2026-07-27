@@ -30,7 +30,7 @@ jobs:
         with:
           filters: |
             frontend:
-              - 'frontend/**'
+              - 'apps/frontend/**'
             api-gateway:
               - 'apps/api-gateway/**'
             auth-service:
