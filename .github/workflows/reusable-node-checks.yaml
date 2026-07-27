@@ -1,4 +1,4 @@
-name: Check Node App
+name: Node Checks
 
 on:
   workflow_call:

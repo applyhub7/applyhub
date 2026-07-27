@@ -154,11 +154,10 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.service == 'frontend' && './frontend/' || format('./apps/{0}/', matrix.service) }}
-          file: ${{ matrix.service == 'frontend' && './frontend/Dockerfile' || format('./apps/{0}/Dockerfile', matrix.service) }}
+          context: "./apps/${{ matrix.service }}/"
+          file: "./apps/${{ matrix.service }}/Dockerfile"
           push: true
-          tags: |
-            ${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-${{ matrix.service }}:${{ needs.prepare.outputs.tag }}
+          tags: ${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-${{ matrix.service }}:${{ needs.prepare.outputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -201,7 +200,8 @@ jobs:
             fi
           done
 
-          git config user.name "github-actions[bot]"
+          git config user.name "github-actions
+          cache-from: type=gha[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git diff --staged --quiet; then
             echo "No actual changes"

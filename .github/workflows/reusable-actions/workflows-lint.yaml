@@ -1,0 +1,19 @@
+name: Workflows Lint
+
+on:
+  pull_request:
+    branchs: [dev, main]
+    paths: ".github/workflows/**"
+
+permissions:
+  context: read
+
+jobs:
+  workflows-lint:
+    name: Workflows Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Lint
+        uses: raven-actions/actionslint@v2
