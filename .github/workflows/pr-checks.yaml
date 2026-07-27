@@ -45,7 +45,7 @@ jobs:
     if: needs.detect-changes.outputs.frontend == 'true'
     uses: ./.github/workflows/check-node-app.yaml
     with:
-      working-directory: frontend
+      working-directory: apps/frontend
       run-build: true
 
   api-gateway:
