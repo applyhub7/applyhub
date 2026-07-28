@@ -73,7 +73,7 @@ jobs:
       - name: Checkout Manifest Repo
         uses: actions/checkout@v4
         with:
-          repository: "https://github.com/applyhub7/applyhub-manifests"
+          repository: applyhub7/applyhub-manifests
           token: ${{ secrets.MANIFEST_REPO_TOKEN }}
 
       - name: Update Manifests Repo
@@ -82,6 +82,6 @@ jobs:
           NEW_TAG: ${{ needs.prepare.outputs.tag }}
         run: |
           for changed_service in $(echo "$SERVICES" | jq -r '.[]'); do
-            FILE="apps-manifests/env/dev/${changed_service}.yaml"
-            sed -i -E 's/^([[:space:]]*tag:[[:space:]]*).*/\1"'"${{ env.NEW_TAG }}"'"/' $FILE
+            FILE="applyhub-manifests/apps-manifests/env/dev/${changed_service}.yaml"
+            sed -i -E 's/^([[:space:]]*tag:[[:space:]]*).*/\1"'"$NEW_TAG"'"/' "$FILE"
           done
