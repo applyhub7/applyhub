@@ -64,3 +64,24 @@ jobs:
           context: "apps/${{ matrix.service }}"
           push: true
           tags: ${{ needs.prepare.outputs.base_name }}-${{ matrix.service }}:${{ needs.prepare.outputs.tag }}
+
+  update-manifest-repo:
+    name: Update Manifest Repo
+    needs: [detect-changes, prepare, build-push-images]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Manifest Repo
+        uses: actions/checkout@v4
+        with:
+          repository: applyhub7/applyhub-manifests
+          token: ${{ secrets.MANIFEST_REPO_TOKEN }}
+
+      - name: Update Manifests Repo
+        env:
+          SERVICES: ${{ needs.detect-changes.outputs.services }}
+          NEW_TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          for changed_service in $(echo "$SERVICES" | jq -r '.[]'); do
+            FILE="applyhub-manifests/apps-manifests/env/dev/${changed_service}.yaml"
+            sed -i -E 's/^([[:space:]]*tag:[[:space:]]*).*/\1"'"$NEW_TAG"'"/' "$FILE"
+          done
