@@ -86,6 +86,9 @@ jobs:
             exit 1
           fi
 
+          echo "Changed services: $SERVICES"
+          echo "Detect result: $DETECT_RESULT"
+
           declare -A service_results=(
             ["frontend"]="$FRONTEND_RESULT"
             ["api-gateway"]="$API_GATEWAY_RESULT"
@@ -96,6 +99,7 @@ jobs:
 
           for service in "${!service_results[@]}"; do
             result="${service_results[$service]}"
+            echo "$service result: $result"
 
             for changed_service in $(echo "$SERVICES" | jq -r '.[]'); do
               if [[ "${service}" == "${changed_service}" && "$result" != "success" ]]; then
