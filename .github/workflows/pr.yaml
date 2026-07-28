@@ -15,9 +15,11 @@ concurrency:
 
 jobs:
   detect-changes:
+    name: Detect changes
     uses: ./.github/workflows/reusable-detect-changes.yaml
 
   frontend:
+    name: Frontend checks
     needs: detect-changes
     if: contains(fromJSON(needs.detect-changes.outputs.services), 'frontend')
     uses: ./.github/workflows/reusable-node-checks.yaml
