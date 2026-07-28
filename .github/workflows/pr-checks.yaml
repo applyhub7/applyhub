@@ -17,16 +17,14 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      frontend: ${{ steps.filter.outputs.frontend }}
-      api-gateway: ${{ steps.filter.outputs.api-gateway }}
-      auth-service: ${{ steps.filter.outputs.auth-service }}
-      application-service: ${{ steps.filter.outputs.application-service }}
-      job-service: ${{ steps.filter.outputs.job-service }}
+      services: ${{ steps.detect.outputs.changes }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: dorny/paths-filter@v3
-        id: filter
+      - name: Detect changes
+        uses: dorny/paths-filter@v3
+        id: detect
         with:
           filters: |
             frontend:
@@ -42,43 +40,43 @@ jobs:
 
   frontend:
     needs: detect-changes
-    if: needs.detect-changes.outputs.frontend == 'true'
-    uses: ./.github/workflows/check-node-app.yaml
+    if: contains(fromJson(needs.detect-changes.outputs.services), 'frontend')
+    uses: ./.github/workflows/reusable-node-checks.yaml
     with:
       working-directory: apps/frontend
       run-build: true
 
   api-gateway:
     needs: detect-changes
-    if: needs.detect-changes.outputs.api-gateway == 'true'
-    uses: ./.github/workflows/check-node-app.yaml
+    if: contains(fromJson(needs.detect-changes.outputs.services), 'api-gateway')
+    uses: ./.github/workflows/reusable-node-checks.yaml
     with:
       working-directory: apps/api-gateway
 
   auth-service:
     needs: detect-changes
-    if: needs.detect-changes.outputs.auth-service == 'true'
-    uses: ./.github/workflows/check-node-app.yaml
+    if: contains(fromJson(needs.detect-changes.outputs.services), 'auth-service')
+    uses: ./.github/workflows/reusable-node-checks.yaml
     with:
       working-directory: apps/auth-service
 
   application-service:
     needs: detect-changes
-    if: needs.detect-changes.outputs.application-service == 'true'
-    uses: ./.github/workflows/check-node-app.yaml
+    if: contains(fromJson(needs.detect-changes.outputs.services), 'application-service')
+    uses: ./.github/workflows/reusable-node-checks.yaml
     with:
       working-directory: apps/application-service
 
   job-service:
     needs: detect-changes
-    if: needs.detect-changes.outputs.job-service == 'true'
-    uses: ./.github/workflows/check-python-service.yaml
+    if: contains(fromJson(needs.detect-changes.outputs.services), 'job-service')
+    uses: ./.github/workflows/reusable-python-checks.yaml
     with:
       working-directory: apps/job-service
-      python-version: "3.11"
 
   pr-checks-gate:
     needs:
+      - detect-changes
       - frontend
       - api-gateway
       - auth-service

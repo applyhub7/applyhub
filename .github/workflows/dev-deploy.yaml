@@ -21,17 +21,14 @@ jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      services: ${{ steps.filter.outputs.changes }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-      api-gateway: ${{ steps.filter.outputs.api-gateway }}
-      auth-service: ${{ steps.filter.outputs.auth-service }}
-      application-service: ${{ steps.filter.outputs.application-service }}
-      job-service: ${{ steps.filter.outputs.job-service }}
+      services: ${{ steps.detect.outputs.changes }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: dorny/paths-filter@v3
-        id: filter
+      - name: Detect changes
+        uses: dorny/paths-filter@v3
+        id: detect
         with:
           filters: |
             frontend:
@@ -48,10 +45,10 @@ jobs:
   prepare-image-tag:
     runs-on: ubuntu-latest
     outputs:
-      tag: ${{ steps.tag.outputs.tag }}
+      tag: ${{ steps.get-tag.outputs.tag }}
     steps:
       - name: Generate Docker image tag
-        id: tag
+        id: get-tag
         run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
   build-and-push:
@@ -80,8 +77,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: "./${{ matrix.service }}/"
-          file: "./${{ matrix.service }}/Dockerfile"
+          context: "./apps/${{ matrix.service }}/"
+          file: "./apps/${{ matrix.service }}/Dockerfile"
           push: true
           tags: ${{ secrets.DOCKER_USER }}/${{ env.PROJECT_NAME }}-${{ matrix.service }}:${{ needs.prepare-image-tag.outputs.tag }}
           cache-from: type=gha
