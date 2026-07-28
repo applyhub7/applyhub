@@ -20,6 +20,7 @@ jobs:
         uses: dorny/paths-filter@v4
         id: changes
         with:
+          base: ${{ github.ref }}
           filters: |
             frontend: 'apps/frontend/**'
             api-gateway: 'apps/api-gateway/**'
