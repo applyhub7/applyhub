@@ -8,6 +8,7 @@ on:
 
 jobs:
   detect-changes:
+    name: Changed Services
     runs-on: ubuntu-latest
     outputs:
       services: ${{ steps.changes.outputs.changes }}

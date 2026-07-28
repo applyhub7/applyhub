@@ -15,11 +15,11 @@ concurrency:
 
 jobs:
   detect-changes:
-    name: Detect changes
+    name: Change Detection
     uses: ./.github/workflows/reusable-detect-changes.yaml
 
   frontend:
-    name: Frontend checks
+    name: Frontend
     needs: detect-changes
     if: contains(fromJSON(needs.detect-changes.outputs.services), 'frontend')
     uses: ./.github/workflows/reusable-node-checks.yaml
@@ -28,6 +28,7 @@ jobs:
       run-build: true
 
   api-gateway:
+    name: API Gateway
     needs: detect-changes
     if: contains(fromJSON(needs.detect-changes.outputs.services), 'api-gateway')
     uses: ./.github/workflows/reusable-node-checks.yaml
@@ -35,6 +36,7 @@ jobs:
       working-directory: apps/api-gateway
 
   auth-service:
+    name: Auth Service
     needs: detect-changes
     if: contains(fromJSON(needs.detect-changes.outputs.services), 'auth-service')
     uses: ./.github/workflows/reusable-node-checks.yaml
@@ -42,6 +44,7 @@ jobs:
       working-directory: apps/auth-service
 
   application-service:
+    name: Application Service
     needs: detect-changes
     if: contains(fromJSON(needs.detect-changes.outputs.services), 'application-service')
     uses: ./.github/workflows/reusable-node-checks.yaml
@@ -49,6 +52,7 @@ jobs:
       working-directory: apps/application-service
 
   job-service:
+    name: Job Service
     needs: detect-changes
     if: contains(fromJSON(needs.detect-changes.outputs.services), 'job-service')
     uses: ./.github/workflows/reusable-python-checks.yaml
@@ -56,7 +60,7 @@ jobs:
       working-directory: apps/job-service
 
   summary:
-    name: Summary
+    name: PR Summary
     needs:
       - detect-changes
       - frontend
