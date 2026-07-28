@@ -31,7 +31,10 @@ jobs:
     steps:
       - name: Prepare image tag
         id: tag
-        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+        run: |
+          TAG="${GITHUB_SHA::7}"
+          echo "Image tag: $TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
       - name: Prepare base image name
         id: name
         run: echo "base_name=${{ vars.DOCKER_USER }}/${{ env.APP_NAME }}" >> "$GITHUB_OUTPUT"
@@ -57,6 +60,11 @@ jobs:
 
       - name: Setup Docker
         uses: docker/setup-buildx-action@v3
+
+      - name: Show image info
+        run: |
+          echo "Service: ${{ matrix.service }}"
+          echo "Image: ${{ needs.prepare.outputs.base_name }}-${{ matrix.service }}:${{ needs.prepare.outputs.tag }}"
 
       - name: Build and Push
         uses: docker/build-push-action@v6
@@ -92,6 +100,9 @@ jobs:
           SERVICES: ${{ needs.detect.outputs.services }}
           NEW_TAG: ${{ needs.prepare.outputs.tag }}
         run: |
+          echo "Changed services: $SERVICES"
+          echo "New image tag: $NEW_TAG"
+
           for changed_service in $(echo "$SERVICES" | jq -r '.[]'); do
             FILE="apps-manifests/env/dev/${changed_service}.yaml"
             
@@ -100,7 +111,9 @@ jobs:
               exit 1
             fi
 
+            echo "Updating $FILE to tag $NEW_TAG"
             sed -i -E "s/^([[:space:]]*tag:[[:space:]]*).*/\1\"$NEW_TAG\"/" "$FILE"
+            grep -n "tag:" "$FILE"
             git add "$FILE"
           done
 
@@ -108,10 +121,13 @@ jobs:
         env:
           NEW_TAG: ${{ needs.prepare.outputs.tag }}
         run: |
+          git status --short
+
           if git diff --cached --quiet; then
-            echo "Nothing changes!"
+            echo "No manifest changes to commit."
             exit 0
           fi
 
           git commit -m "deploy(dev): update image tags to $NEW_TAG"
           git push origin main
+          echo "Manifest repo updated successfully."
