@@ -13,6 +13,7 @@ on:
 
 jobs:
   check:
+    name: Quality Checks
     runs-on: ubuntu-latest
 
     defaults:
@@ -20,7 +21,8 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
