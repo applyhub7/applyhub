@@ -96,7 +96,7 @@ jobs:
             )
 
           for service in "${!service_results[@]}"; do
-            result = "${service_results[$service]}"
+            result="${service_results[$service]}"
 
             for changed_service in $(echo "$SERVICES" | jq -r '.[]'); do
               if [[ "${service}" == "${changed_service}" && "$result" != "success" ]]; then
