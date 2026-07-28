@@ -68,63 +68,38 @@ jobs:
       - auth-service
       - application-service
       - job-service
-
-    if: ${{ always() }}
-
+    if: always()
     runs-on: ubuntu-latest
-
     steps:
-      - name: Generate summary
+      - name: Generate summary and verify results
         env:
+          SERVICES: ${{ needs.detect-changes.outputs.services }}
           DETECT_RESULT: ${{ needs.detect-changes.result }}
+
           FRONTEND_RESULT: ${{ needs.frontend.result }}
           API_GATEWAY_RESULT: ${{ needs.api-gateway.result }}
           AUTH_SERVICE_RESULT: ${{ needs.auth-service.result }}
           APPLICATION_SERVICE_RESULT: ${{ needs.application-service.result }}
           JOB_SERVICE_RESULT: ${{ needs.job-service.result }}
-
-        run: |
-          {
-            echo "## PR checks summary"
-            echo
-            echo "| Component | Result |"
-            echo "|---|---|"
-            echo "| Detect changes | $DETECT_RESULT |"
-            echo "| Frontend | $FRONTEND_RESULT |"
-            echo "| API Gateway | $API_GATEWAY_RESULT |"
-            echo "| Auth Service | $AUTH_SERVICE_RESULT |"
-            echo "| Application Service | $APPLICATION_SERVICE_RESULT |"
-            echo "| Job Service | $JOB_SERVICE_RESULT |"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Verify results
-        env:
-          DETECT_RESULT: ${{ needs.detect-changes.result }}
-          FRONTEND_RESULT: ${{ needs.frontend.result }}
-          API_GATEWAY_RESULT: ${{ needs.api-gateway.result }}
-          AUTH_SERVICE_RESULT: ${{ needs.auth-service.result }}
-          APPLICATION_SERVICE_RESULT: ${{ needs.application-service.result }}
-          JOB_SERVICE_RESULT: ${{ needs.job-service.result }}
-
         run: |
           if [[ "$DETECT_RESULT" != "success" ]]; then
-            echo "Change detection failed: $DETECT_RESULT"
+            echo "Detect changes failed!"
             exit 1
           fi
 
-          results=(
-            "$FRONTEND_RESULT"
-            "$API_GATEWAY_RESULT"
-            "$AUTH_SERVICE_RESULT"
-            "$APPLICATION_SERVICE_RESULT"
-            "$JOB_SERVICE_RESULT"
-          )
+          declare -A service_results=(
+            ["frontend"]="$FRONTEND_RESULT"
+            ["api-gateway"]="$API_GATEWAY_RESULT"
+            ["auth-service"]="$AUTH_SERVICE_RESULT"
+            ["application-service"]="$APPLICATION_SERVICE_RESULT"
+            ["job-service"]="$JOB_SERVICE_RESULT"
+            )
 
-          for result in "${results[@]}"; do
-            if [[ "$result" != "success" && "$result" != "skipped" ]]; then
-              echo "One or more service checks failed or were cancelled."
-              exit 1
-            fi
+          for service in "${!service_results[@]}"; do
+            for changed_service in $(echo "$SERVICES" | jq -r '.[]'); do
+              if [[ "${service}" == "${changed_service}" && "${service_results[$service]}" != "success" ]]; then
+                 echo "Failed!"
+                 exit 1
+              fi
+            done
           done
-
-          echo "All required PR checks passed."
