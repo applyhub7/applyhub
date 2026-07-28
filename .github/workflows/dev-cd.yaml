@@ -84,3 +84,4 @@ jobs:
           for changed_service in $(echo "$SERVICES" | jq -r '.[]'); do
             FILE="apps-manifests/env/dev/${changed_service}.yaml"
             sed -i -E 's/^([[:space:]]*tag:[[:space:]]*).*/\1"'"${{ env.NEW_TAG }}"'"/' $FILE
+          done
