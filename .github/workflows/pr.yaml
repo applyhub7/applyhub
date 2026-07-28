@@ -96,10 +96,14 @@ jobs:
             )
 
           for service in "${!service_results[@]}"; do
+            result = "${service_results[$service]}"
+
             for changed_service in $(echo "$SERVICES" | jq -r '.[]'); do
-              if [[ "${service}" == "${changed_service}" && "${service_results[$service]}" != "success" ]]; then
-                 echo "Failed!"
+              if [[ "${service}" == "${changed_service}" && "$result" != "success" ]]; then
+                   echo "$service was changed but result is $result"
                  exit 1
               fi
             done
           done
+
+          echo "All required PR checks passed."
