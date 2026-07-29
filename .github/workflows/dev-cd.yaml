@@ -1,0 +1,133 @@
+name: Dev CD
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - "apps/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_NAME: applyhub
+
+jobs:
+  detect:
+    name: Detect
+    uses: ./.github/workflows/reusable-detect-changes.yaml
+
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      base_name: ${{ steps.name.outputs.base_name }}
+    steps:
+      - name: Prepare image tag
+        id: tag
+        run: |
+          TAG="${GITHUB_SHA::7}"
+          echo "Image tag: $TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+      - name: Prepare base image name
+        id: name
+        run: echo "base_name=${{ vars.DOCKER_USER }}/${{ env.APP_NAME }}" >> "$GITHUB_OUTPUT"
+
+  build-and-push:
+    name: Build & Push
+    needs: [detect, prepare]
+    if: needs.detect.outputs.services != '[]' && needs.detect.outputs.services != ''
+    strategy:
+      fail-fast: true
+      matrix:
+        service: ${{ fromJSON(needs.detect.outputs.services) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASS }}
+
+      - name: Setup Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Show image info
+        run: |
+          echo "Service: ${{ matrix.service }}"
+          echo "Image: ${{ needs.prepare.outputs.base_name }}-${{ matrix.service }}:${{ needs.prepare.outputs.tag }}"
+
+      - name: Build and Push
+        uses: docker/build-push-action@v6
+        with:
+          context: "apps/${{ matrix.service }}"
+          push: true
+          tags: ${{ needs.prepare.outputs.base_name }}-${{ matrix.service }}:${{ needs.prepare.outputs.tag }}
+
+  update-manifest:
+    name: Update Manifest
+    needs: [detect, prepare, build-and-push]
+    if: needs.detect.outputs.services != '[]' && needs.detect.outputs.services != ''
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: manifests
+    steps:
+      - name: Checkout Manifest
+        uses: actions/checkout@v4
+        with:
+          repository: applyhub7/applyhub-manifests
+          ref: main
+          token: ${{ secrets.MANIFEST_REPO_TOKEN }}
+          path: manifests
+
+      - name: Configure GitHub Actions Bot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Update Image Tag
+        env:
+          SERVICES: ${{ needs.detect.outputs.services }}
+          NEW_TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          echo "Changed services: $SERVICES"
+          echo "New image tag: $NEW_TAG"
+
+          for changed_service in $(echo "$SERVICES" | jq -r '.[]'); do
+            FILE="apps-manifests/env/dev/${changed_service}.yaml"
+            
+            if [[ ! -f "$FILE" ]]; then
+              echo "Manifest file not found: $FILE"
+              exit 1
+            fi
+
+            echo "Updating $FILE to tag $NEW_TAG"
+            sed -i -E "s/^([[:space:]]*tag:[[:space:]]*).*/\1\"$NEW_TAG\"/" "$FILE"
+            grep -n "tag:" "$FILE"
+            git add "$FILE"
+          done
+
+      - name: Push Manifests
+        env:
+          NEW_TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          git status --short
+
+          if git diff --cached --quiet; then
+            echo "No manifest changes to commit."
+            exit 0
+          fi
+
+          git commit -m "deploy(dev): update image tags to $NEW_TAG"
+          git push origin main
+          echo "Manifest repo updated successfully."

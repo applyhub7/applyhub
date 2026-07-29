@@ -52,16 +52,16 @@ flowchart LR
     Application --> Storage[(MinIO / S3)]
 ```
 
-| Service | Runtime | Port | Role |
-| --- | --- | --- | --- |
-| `frontend` | React, Vite, TypeScript | 80 in Docker | Web UI |
-| `api-gateway` | Node.js, Fastify | 4000 | Routes client requests |
-| `auth-service` | Node.js, Express | 4001 | Authentication and token handling |
-| `job-service` | Python, FastAPI | 4002 | Job listing and job management |
-| `application-service` | Node.js, Fastify | 4003 | Applications and resume/object storage |
+| Service               | Runtime                 | Port         | Role                                   |
+| --------------------- | ----------------------- | ------------ | -------------------------------------- |
+| `frontend`            | React, Vite, TypeScript | 80 in Docker | Web UI                                 |
+| `api-gateway`         | Node.js, Fastify        | 4000         | Routes client requests                 |
+| `auth-service`        | Node.js, Express        | 4001         | Authentication and token handling      |
+| `job-service`         | Python, FastAPI         | 4002         | Job listing and job management         |
+| `application-service` | Node.js, Fastify        | 4003         | Applications and resume/object storage |
 
 The frontend calls the API Gateway. The gateway forwards `/auth`, `/jobs` and
-`/applications` traffic to the matching backend service.
+`/applications` traffic to the matching apps service.
 
 <a id="service-context"></a>
 
@@ -69,10 +69,10 @@ The frontend calls the API Gateway. The gateway forwards `/auth`, `/jobs` and
 
 Main gateway routes:
 
-| Route group | Target service |
-| --- | --- |
-| `/auth/*` | `auth-service` |
-| `/jobs/*` | `job-service` |
+| Route group       | Target service        |
+| ----------------- | --------------------- |
+| `/auth/*`         | `auth-service`        |
+| `/jobs/*`         | `job-service`         |
 | `/applications/*` | `application-service` |
 
 Main app capabilities:
@@ -87,8 +87,8 @@ Main app capabilities:
 ## 📁 Repository Structure
 
 ```text
-frontend/                   # React/Vite frontend used for image build
-backend/
+apps/
+  frontend/                 # React/Vite frontend used for image build
   api-gateway/              # Node.js Fastify gateway
   auth-service/             # Node.js Express service
   job-service/              # Python FastAPI service
@@ -96,7 +96,7 @@ backend/
 .github/workflows/          # CI/CD workflows
 ```
 
-Each service keeps its own dependencies, scripts, tests and Dockerfile.
+Each app keeps its own dependencies, scripts, tests and Dockerfile.
 
 <a id="cicd-flow"></a>
 
@@ -133,27 +133,27 @@ flowchart TD
 
 ## ⚙️ GitHub Actions Workflows
 
-| Workflow | Purpose |
-| --- | --- |
-| `pr-checks.yaml` | Detects changed services and runs only the required checks |
-| `check-node-app.yaml` | Reusable Node.js workflow for install, lint, format check, test and optional build |
-| `check-python-service.yaml` | Reusable Python workflow for dependency install, Ruff and Pytest |
-| `dev-deploy.yaml` | Builds changed images on `dev`, pushes to Docker Hub and updates dev manifests |
-| `prod-deploy.yaml` | Builds release images and updates prod manifests with a release tag |
+| Workflow                    | Purpose                                                                            |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| `pr-checks.yaml`            | Detects changed services and runs only the required checks                         |
+| `check-node-app.yaml`       | Reusable Node.js workflow for install, lint, format check, test and optional build |
+| `check-python-service.yaml` | Reusable Python workflow for dependency install, Ruff and Pytest                   |
+| `dev-deploy.yaml`           | Builds changed images on `dev`, pushes to Docker Hub and updates dev manifests     |
+| `prod-deploy.yaml`          | Builds release images and updates prod manifests with a release tag                |
 
-This keeps validation and deployment scoped to the services affected by a
-change instead of rebuilding the entire monorepo every time.
+This keeps validation and deployment scoped to the apps affected by a change
+instead of rebuilding the entire monorepo every time.
 
 <a id="image-tagging-strategy"></a>
 
 ## 🏷️ Image Tagging Strategy
 
-| Environment | Tag format | Purpose |
-| --- | --- | --- |
-| Development | Short Git commit SHA | Trace each dev deployment back to a source revision |
-| Production | Release tag, such as `v0.0.6` | Immutable release deployment and rollback |
+| Environment | Tag format                    | Purpose                                             |
+| ----------- | ----------------------------- | --------------------------------------------------- |
+| Development | Short Git commit SHA          | Trace each dev deployment back to a source revision |
+| Production  | Release tag, such as `v0.0.6` | Immutable release deployment and rollback           |
 
-Images are published per service:
+Images are published per app:
 
 ```text
 noseyug/applyhub-frontend
@@ -210,15 +210,15 @@ python -m pytest
 
 ## 🐳 Docker Build Scope
 
-Each deployable service owns a Dockerfile, so CI can build images independently:
+Each deployable app owns a Dockerfile, so CI can build images independently:
 
-| Service | Dockerfile |
-| --- | --- |
-| `frontend` | `frontend/Dockerfile` |
-| `api-gateway` | `backend/api-gateway/Dockerfile` |
-| `auth-service` | `backend/auth-service/Dockerfile` |
-| `job-service` | `backend/job-service/Dockerfile` |
-| `application-service` | `backend/application-service/Dockerfile` |
+| Service               | Dockerfile                            |
+| --------------------- | ------------------------------------- |
+| `frontend`            | `apps/frontend/Dockerfile`            |
+| `api-gateway`         | `apps/api-gateway/Dockerfile`         |
+| `auth-service`        | `apps/auth-service/Dockerfile`        |
+| `job-service`         | `apps/job-service/Dockerfile`         |
+| `application-service` | `apps/application-service/Dockerfile` |
 
 The frontend uses a multi-stage build: Node builds the Vite app and Nginx
 serves the static output.
@@ -233,13 +233,13 @@ repository.
 
 Key variables:
 
-| Service | Variables |
-| --- | --- |
-| Frontend | `VITE_API_URL` |
-| API Gateway | `GATEWAY_PORT`, `AUTH_URL`, `JOB_URL`, `APPLICATION_URL` |
-| Auth Service | `AUTH_PORT`, `AUTH_DB_*`, `JWT_SECRET` |
-| Job Service | `JOB_PORT`, `JOB_DB_*` |
-| Application Service | `APPLICATION_PORT`, `APPLICATION_DB_*`, `MINIO_*` |
+| Service             | Variables                                                |
+| ------------------- | -------------------------------------------------------- |
+| Frontend            | `VITE_API_URL`                                           |
+| API Gateway         | `GATEWAY_PORT`, `AUTH_URL`, `JOB_URL`, `APPLICATION_URL` |
+| Auth Service        | `AUTH_PORT`, `AUTH_DB_*`, `JWT_SECRET`                   |
+| Job Service         | `JOB_PORT`, `JOB_DB_*`                                   |
+| Application Service | `APPLICATION_PORT`, `APPLICATION_DB_*`, `MINIO_*`        |
 
 <a id="related-repositories"></a>
 

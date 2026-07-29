@@ -1,0 +1,60 @@
+name: Prod CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to deploy:"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-release-tag:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check
+        id: check
+        run: |
+          if [[ -z "$TAG" ]]; then
+            echo "Release tag is required"
+            exit 1
+          fi
+
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid release tag format: $TAG"
+            exit 1
+          fi
+
+          git fetch origin refs/heads/main:refs/remotes/origin/main --tags
+
+          if ! git-rev-parse --verify --quiet "refs/tags/$TAG" >/dev/null; then
+            echo "Tag does not exist: $TAG"
+            exit 1
+          fi
+
+          if ! git rev-list -n 1 "refs/tags/$TAG" >/dev/null; then
+            echo "Tag does not point to a commit: $TAG"
+            exit 1
+          fi
+
+          if ! git merge-base --is-ancestor "refs/tags/$TAG" origin/main; then
+            echo "Tag $TAG is not cotained in origin/main"
+            exit 1
+          fi
+
+          echo "Release tag is valid: $TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"

@@ -3,82 +3,66 @@ name: PR Checks
 on:
   pull_request:
     branches: [dev, main]
-    types: [opened, synchronize, reopened]
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    types: [opened, reopened, synchronize]
 
 permissions:
   contents: read
   pull-requests: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   detect-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      frontend: ${{ steps.filter.outputs.frontend }}
-      api-gateway: ${{ steps.filter.outputs.api-gateway }}
-      auth-service: ${{ steps.filter.outputs.auth-service }}
-      application-service: ${{ steps.filter.outputs.application-service }}
-      job-service: ${{ steps.filter.outputs.job-service }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            frontend:
-              - 'frontend/**'
-            api-gateway:
-              - 'backend/api-gateway/**'
-            auth-service:
-              - 'backend/auth-service/**'
-            application-service:
-              - 'backend/application-service/**'
-            job-service:
-              - 'backend/job-service/**'
+    name: Change Detection
+    uses: ./.github/workflows/reusable-detect-changes.yaml
 
   frontend:
+    name: Frontend
     needs: detect-changes
-    if: needs.detect-changes.outputs.frontend == 'true'
-    uses: ./.github/workflows/check-node-app.yaml
+    if: contains(fromJSON(needs.detect-changes.outputs.services), 'frontend')
+    uses: ./.github/workflows/reusable-node-checks.yaml
     with:
-      working-directory: frontend
+      working-directory: apps/frontend
       run-build: true
 
   api-gateway:
+    name: API Gateway
     needs: detect-changes
-    if: needs.detect-changes.outputs.api-gateway == 'true'
-    uses: ./.github/workflows/check-node-app.yaml
+    if: contains(fromJSON(needs.detect-changes.outputs.services), 'api-gateway')
+    uses: ./.github/workflows/reusable-node-checks.yaml
     with:
-      working-directory: backend/api-gateway
+      working-directory: apps/api-gateway
 
   auth-service:
+    name: Auth Service
     needs: detect-changes
-    if: needs.detect-changes.outputs.auth-service == 'true'
-    uses: ./.github/workflows/check-node-app.yaml
+    if: contains(fromJSON(needs.detect-changes.outputs.services), 'auth-service')
+    uses: ./.github/workflows/reusable-node-checks.yaml
     with:
-      working-directory: backend/auth-service
+      working-directory: apps/auth-service
 
   application-service:
+    name: Application Service
     needs: detect-changes
-    if: needs.detect-changes.outputs.application-service == 'true'
-    uses: ./.github/workflows/check-node-app.yaml
+    if: contains(fromJSON(needs.detect-changes.outputs.services), 'application-service')
+    uses: ./.github/workflows/reusable-node-checks.yaml
     with:
-      working-directory: backend/application-service
+      working-directory: apps/application-service
 
   job-service:
+    name: Job Service
     needs: detect-changes
-    if: needs.detect-changes.outputs.job-service == 'true'
-    uses: ./.github/workflows/check-python-service.yaml
+    if: contains(fromJSON(needs.detect-changes.outputs.services), 'job-service')
+    uses: ./.github/workflows/reusable-python-checks.yaml
     with:
-      working-directory: backend/job-service
-      python-version: "3.11"
+      working-directory: apps/job-service
 
-  pr-checks-gate:
+  summary:
+    name: PR Summary
     needs:
+      - detect-changes
       - frontend
       - api-gateway
       - auth-service
@@ -87,14 +71,42 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Report result
+      - name: Generate summary and verify results
+        env:
+          SERVICES: ${{ needs.detect-changes.outputs.services }}
+          DETECT_RESULT: ${{ needs.detect-changes.result }}
+          FRONTEND_RESULT: ${{ needs.frontend.result }}
+          API_GATEWAY_RESULT: ${{ needs.api-gateway.result }}
+          AUTH_SERVICE_RESULT: ${{ needs.auth-service.result }}
+          APPLICATION_SERVICE_RESULT: ${{ needs.application-service.result }}
+          JOB_SERVICE_RESULT: ${{ needs.job-service.result }}
         run: |
-          results='${{ toJson(needs) }}'
-          echo "$results"
-
-          if echo "$results" | jq -e '.[] | select(.result == "failure" or .result == "cancelled")' >/dev/null; then
-            echo "FAILED - one or more services failed checks"
+          if [[ "$DETECT_RESULT" != "success" ]]; then
+            echo "Detect changes failed!"
             exit 1
           fi
 
-          echo "PASSED - all required service checks completed successfully"
+          echo "Changed services: $SERVICES"
+          echo "Detect result: $DETECT_RESULT"
+
+          declare -A service_results=(
+            ["frontend"]="$FRONTEND_RESULT"
+            ["api-gateway"]="$API_GATEWAY_RESULT"
+            ["auth-service"]="$AUTH_SERVICE_RESULT"
+            ["application-service"]="$APPLICATION_SERVICE_RESULT"
+            ["job-service"]="$JOB_SERVICE_RESULT"
+          )
+
+          for service in "${!service_results[@]}"; do
+            result="${service_results[$service]}"
+            echo "$service result: $result"
+
+            for changed_service in $(echo "$SERVICES" | jq -r '.[]'); do
+              if [[ "${service}" == "${changed_service}" && "$result" != "success" ]]; then
+                echo "$service was changed but result is $result"
+                exit 1
+              fi
+            done
+          done
+
+          echo "All required PR checks passed."
