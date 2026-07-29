@@ -41,7 +41,7 @@ jobs:
 
           git fetch origin refs/heads/main:refs/remotes/origin/main --tags
 
-          if ! git-rev-parse --verify --quiet "refs/tags/$TAG" >/dev/null; then
+          if ! git rev-parse --verify --quiet "refs/tags/$TAG" >/dev/null; then
             echo "Tag does not exist: $TAG"
             exit 1
           fi
