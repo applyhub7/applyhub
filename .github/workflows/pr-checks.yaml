@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   detect-changes:
-    name: Change Detection
+    name: Detect
     uses: ./.github/workflows/reusable-detect-changes.yaml
 
   frontend:
@@ -71,6 +71,9 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Check yq
+        run: yq --version
+
       - name: Generate summary and verify results
         env:
           SERVICES: ${{ needs.detect-changes.outputs.services }}
